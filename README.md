@@ -1,16 +1,58 @@
-# bunkmate
 
-A new Flutter project.
+# Attendance Tracker (BunkMate)
 
-## Getting Started
+This is a basic Flutter app to help track college attendance for lectures and help me maintain 80% attendance.
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## 🚀 Project Setup & Usage
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### 1. Clone the Repository
+```sh
+git clone <your-repo-url>
+cd Attendance_Tracker
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### 2. Create Platform Folders (if missing)
+If you don't see `android/`, `ios/`, or `web/` folders, run:
+```sh
+flutter create --platforms [ios|android|windows|macos|linux|web]
+```
+This will generate all necessary platform folders.
+
+### 3. Install Dependencies
+```sh
+flutter pub get
+```
+
+### 4. Test the Build on Web
+```sh
+flutter run -d chrome
+```
+This will launch the app in your browser.
+
+### 5. Run the App on Android (Debug Mode)
+Connect your Android device (with USB debugging enabled) or use an emulator:
+```sh
+flutter run -d android
+```
+
+### 6. Build the Final APK for Android
+```sh
+flutter build apk --release
+```
+The APK will be generated in `build/app/outputs/flutter-apk/app-release.apk`.
+
+### 7. Build for iOS (on macOS only)
+```sh
+flutter build ios --release
+```
+You can then open the iOS project in Xcode for further steps.
+
+---
+
+## 📚 Resources
+
+- [Flutter Documentation](https://docs.flutter.dev/)
+- [Flutter Codelabs](https://docs.flutter.dev/get-started/codelab)
+- [Flutter Cookbook](https://docs.flutter.dev/cookbook)
