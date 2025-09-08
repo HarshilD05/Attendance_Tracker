@@ -9,7 +9,7 @@ This is a basic Flutter app to help track college attendance for lectures and he
 
 ### 1. Clone the Repository
 ```sh
-git clone <your-repo-url>
+git clone "https://github.com/HarshilD05/Attendance_Tracker.git"
 cd Attendance_Tracker
 ```
 
