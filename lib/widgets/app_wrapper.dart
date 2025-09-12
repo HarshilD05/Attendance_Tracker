@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/theme_manager.dart';
-import '../screens/auth/login_screen.dart';
+import 'auth_wrapper.dart';
 
 class BunkMateApp extends StatefulWidget {
   const BunkMateApp({super.key});
@@ -35,7 +35,7 @@ class _BunkMateAppState extends State<BunkMateApp> {
     return MaterialApp(
       title: 'BunkMate',
       theme: _themeManager.currentTheme,
-      home: const LoginScreen(),
+      home: const AuthWrapper(),
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
         // Handle any navigation or overlay logic here if needed
