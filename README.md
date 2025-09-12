@@ -16,7 +16,7 @@ cd Attendance_Tracker
 ### 2. Create Platform Folders (if missing)
 If you don't see `android/`, `ios/`, or `web/` folders, run:
 ```sh
-flutter create --platforms [ios|android|windows|macos|linux|web]
+flutter create . --platforms [ios|android|windows|macos|linux|web]
 ```
 This will generate all necessary platform folders.
 
