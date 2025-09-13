@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 // import 'package:google_sign_in/google_sign_in.dart'; // Temporarily disabled
+import 'user_service.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   // final GoogleSignIn _googleSignIn = GoogleSignIn(); // Temporarily disabled
+  final UserService _userService = UserService();
 
   // Get current user
   User? get currentUser => _auth.currentUser;
@@ -30,6 +32,11 @@ class AuthService {
         }
       }
       
+      // Ensure user document exists in Firestore after successful sign-in
+      if (credential.user != null && credential.user!.emailVerified) {
+        await ensureUserDocumentExists();
+      }
+      
       return credential;
     } on FirebaseAuthException catch (e) {
       throw _handleAuthException(e);
@@ -48,6 +55,9 @@ class AuthService {
       if (credential.user != null) {
         await credential.user!.updateDisplayName(name);
         await credential.user!.sendEmailVerification();
+        
+        // Note: We don't create the Firestore user document here
+        // It will be created after email verification is confirmed
       }
       
       return credential;
@@ -101,6 +111,44 @@ class AuthService {
   Future<bool> isEmailVerified() async {
     await _auth.currentUser?.reload();
     return _auth.currentUser?.emailVerified ?? false;
+  }
+
+  // Create user document in Firestore after email verification
+  Future<void> createUserDocumentIfVerified() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    // Check if email is verified
+    await user.reload();
+    if (!user.emailVerified) return;
+
+    try {
+      // Check if user document already exists
+      if (await _userService.userExists(user.uid)) {
+        return; // User document already exists
+      }
+
+      // Create user document in Firestore
+      await _userService.createUserFromAuth(user);
+    } catch (e) {
+      print('Error creating user document: $e');
+      // Don't throw here to avoid breaking the auth flow
+    }
+  }
+
+  // Ensure user document exists (call this after successful authentication)
+  Future<void> ensureUserDocumentExists() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      // Only create if user is verified and document doesn't exist
+      if (user.emailVerified && !await _userService.userExists(user.uid)) {
+        await _userService.createUserFromAuth(user);
+      }
+    } catch (e) {
+      print('Error ensuring user document exists: $e');
+    }
   }
 
   // Resend verification email
