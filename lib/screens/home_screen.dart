@@ -179,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues( alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -323,9 +323,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     _buildFeatureCard(
                       context,
-                      icon: Icons.calendar_today,
-                      title: 'Attendance',
-                      subtitle: 'Track your attendance',
+                      icon: Icons.school,
+                      title: 'Semesters',
+                      subtitle: 'Manage semesters',
+                      onTap: () => Navigator.pushNamed(context, '/semesters'),
                     ),
                     _buildFeatureCard(
                       context,
@@ -356,37 +357,41 @@ class _HomeScreenState extends State<HomeScreen> {
     required IconData icon,
     required String title,
     required String subtitle,
+    VoidCallback? onTap,
   }) {
     return Expanded(
-      child: Container(
-        decoration: AppTheme.getCardDecoration(elevation: 2),
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              size: 32,
-              color: AppColors.primary,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: AppTheme.getCardDecoration(elevation: 2),
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                size: 32,
+                color: AppColors.primary,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );

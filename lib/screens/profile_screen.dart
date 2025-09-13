@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
 import '../services/auth_service.dart';
+import '../services/user_service.dart';
+import '../models/app_user.dart';
 import '../widgets/auth_wrapper.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -13,12 +15,28 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
+  final UserService _userService = UserService();
   User? _currentUser;
+  AppUser? _appUser;
 
   @override
   void initState() {
     super.initState();
     _currentUser = _authService.currentUser;
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final appUser = await _userService.getCurrentUser();
+      if (mounted) {
+        setState(() {
+          _appUser = appUser;
+        });
+      }
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
   }
 
   void _showChangePasswordDialog() {
@@ -244,7 +262,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withValues(alpha: 0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -254,7 +272,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   CircleAvatar(
                     radius: 60,
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.1),
                     backgroundImage: _currentUser?.photoURL != null
                         ? NetworkImage(_currentUser!.photoURL!)
                         : null,
@@ -268,7 +286,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _currentUser?.displayName ?? 'No Name',
+                    _appUser?.nameOrEmail ?? _currentUser?.displayName ?? 'No Name',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -281,7 +299,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.primary.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -302,8 +320,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // User Information
             _buildInfoCard(
               'Email Address',
-              _currentUser?.email ?? 'No email',
+              _appUser?.email ?? _currentUser?.email ?? 'No email',
               Icons.email,
+            ),
+            
+            _buildInfoCard(
+              'Total Semesters',
+              '${_appUser?.semesterIds.length ?? 0}',
+              Icons.school,
             ),
             
             _buildInfoCard(

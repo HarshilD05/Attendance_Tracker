@@ -13,6 +13,7 @@ class EmailVerificationScreen extends StatefulWidget {
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   final AuthService _authService = AuthService();
   Timer? _verificationTimer;
+  Timer? _countdownTimer;
   bool _isResending = false;
   bool _canResend = false;
   int _resendCountdown = 60;
@@ -27,6 +28,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   @override
   void dispose() {
     _verificationTimer?.cancel();
+    _countdownTimer?.cancel();
     super.dispose();
   }
 
@@ -38,6 +40,10 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         
         if (isVerified) {
           timer.cancel();
+          
+          // Create user document in Firestore after verification
+          await _authService.createUserDocumentIfVerified();
+          
           if (mounted) {
             // AuthWrapper will automatically redirect to home
             Navigator.of(context).pop();
@@ -48,22 +54,31 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   }
 
   void _startResendCountdown() {
-    Timer.periodic(const Duration(seconds: 1), (timer) {
+    _countdownTimer?.cancel(); // Cancel any existing timer
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      
       if (_resendCountdown > 0) {
         setState(() {
           _resendCountdown--;
         });
       } else {
-        setState(() {
-          _canResend = true;
-        });
+        if (mounted) {
+          setState(() {
+            _canResend = true;
+          });
+        }
         timer.cancel();
+        _countdownTimer = null;
       }
     });
   }
 
   Future<void> _resendVerificationEmail() async {
-    if (!_canResend || _isResending) return;
+    if (!_canResend || _isResending || !mounted) return;
 
     setState(() {
       _isResending = true;
@@ -71,6 +86,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
     try {
       await _authService.resendVerificationEmail();
+      
+      if (!mounted) return;
       
       setState(() {
         _canResend = false;
@@ -89,6 +106,8 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
+      
       setState(() {
         _isResending = false;
       });
@@ -167,7 +186,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primary.withValues( alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -197,7 +216,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: AppColors.primary.withOpacity(0.3),
+                    color: AppColors.primary.withValues( alpha: 0.3),
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
