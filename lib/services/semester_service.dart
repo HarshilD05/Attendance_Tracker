@@ -321,4 +321,25 @@ class SemesterService extends BaseFirestoreService {
       throw Exception('Failed to get semester stats: ${handleFirestoreError(e)}');
     }
   }
+
+  /// Update all holidays for a semester at once (more efficient than individual updates)
+  Future<void> updateSemesterHolidays(String semesterId, List<DateTime> holidays) async {
+    ensureAuthenticated();
+    
+    try {
+      final semester = await getSemester(semesterId);
+      if (semester == null) {
+        throw Exception('Semester not found');
+      }
+
+      // Sort holidays chronologically
+      final sortedHolidays = List<DateTime>.from(holidays);
+      sortedHolidays.sort();
+      
+      final updatedSemester = semester.copyWith(holidayList: sortedHolidays);
+      await updateSemester(updatedSemester);
+    } catch (e) {
+      throw Exception('Failed to update holidays: ${handleFirestoreError(e)}');
+    }
+  }
 }

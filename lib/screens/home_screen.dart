@@ -278,45 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
-                Container(
-                  decoration: AppTheme.getCardDecoration(),
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: AppColors.primary,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Getting Started',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'This is your home screen. Use the menu button (☰) in the top-left corner to access your profile and other features.',
-                        style: TextStyle(fontSize: 16, height: 1.5),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'More features will be available once you connect to Firebase!',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontStyle: FontStyle.italic,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                
                 const SizedBox(height: 32),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/semester_service.dart';
 import '../models/semester.dart';
 import 'package:intl/intl.dart';
+import 'holiday_screen.dart';
 
 class SemesterDetailScreen extends StatefulWidget {
   final String semesterId;
@@ -207,6 +208,9 @@ class _SemesterDetailScreenState extends State<SemesterDetailScreen>
   }
 
   Widget _buildFloatingActionButton() {
+    // Only show FAB for subjects and timetable tabs
+    if (_tabController.index == 2) return const SizedBox.shrink(); // Hide for holidays tab
+    
     return FloatingActionButton(
       onPressed: () {
         switch (_tabController.index) {
@@ -215,9 +219,6 @@ class _SemesterDetailScreenState extends State<SemesterDetailScreen>
             break;
           case 1: // Timetable tab
             _showEditTimetableDialog();
-            break;
-          case 2: // Holidays tab
-            _showAddHolidayDialog();
             break;
         }
       },
@@ -343,40 +344,91 @@ class _SemesterDetailScreenState extends State<SemesterDetailScreen>
 
   Widget _buildHolidaysTab() {
     final theme = Theme.of(context);
-    final dateFormat = DateFormat('MMM dd, yyyy (EEEE)');
     
     return RefreshIndicator(
       onRefresh: _loadSemester,
-      child: _semester!.holidayList.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.event_busy, size: 80, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text('No Holidays Added', style: theme.textTheme.headlineSmall),
-                  const SizedBox(height: 8),
-                  const Text('Add holidays to exclude from working days'),
-                ],
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Holiday icon
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: theme.primaryColor.withValues( alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.calendar_month,
+                  size: 64,
+                  color: theme.primaryColor,
+                ),
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _semester!.holidayList.length,
-              itemBuilder: (context, index) {
-                final holiday = _semester!.holidayList[index];
-                return Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.event_busy, color: Colors.red),
-                    title: Text(dateFormat.format(holiday)),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => _deleteHoliday(holiday),
-                    ),
+              
+              const SizedBox(height: 32),
+              
+              // Title
+              Text(
+                'Holiday Management',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Summary
+              Text(
+                _semester!.holidayList.isEmpty
+                    ? 'No holidays configured yet'
+                    : '${_semester!.holidayList.length} holidays configured',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: Colors.grey[600],
+                ),
+              ),
+              
+              const SizedBox(height: 8),
+              
+              if (_semester!.holidayList.isNotEmpty)
+                Text(
+                  'Working days: ${_semester!.totalWorkingDays}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey[600],
                   ),
-                );
-              },
-            ),
+                ),
+              
+              const SizedBox(height: 32),
+              
+              // Calendar management button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _openHolidayCalendar(),
+                  icon: const Icon(Icons.calendar_month),
+                  label: const Text('Open Holiday Calendar'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    textStyle: const TextStyle(fontSize: 16),
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // Description
+              Text(
+                'Use the calendar to visually select and manage holidays for this semester.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -392,33 +444,6 @@ class _SemesterDetailScreenState extends State<SemesterDetailScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Edit timetable feature coming soon')),
     );
-  }
-
-  void _showAddHolidayDialog() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: _semester!.semStartDate,
-      lastDate: _semester!.semEndDate,
-    );
-
-    if (date != null) {
-      try {
-        await _semesterService.addHolidayToSemester(_semester!.id!, date);
-        await _loadSemester();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Holiday added successfully')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error adding holiday: $e')),
-          );
-        }
-      }
-    }
   }
 
   void _deleteSubject(String subjectId) async {
@@ -460,23 +485,22 @@ class _SemesterDetailScreenState extends State<SemesterDetailScreen>
     }
   }
 
-  void _deleteHoliday(DateTime holiday) async {
-    try {
-      await _semesterService.removeHolidayFromSemester(_semester!.id!, holiday);
-      await _loadSemester();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Holiday removed successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error removing holiday: $e')),
-        );
+  void _openHolidayCalendar() async {
+    if (_semester != null) {
+      final result = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HolidayScreen(semester: _semester!),
+        ),
+      );
+      
+      // Refresh the semester data if holidays were updated
+      if (result == true || result == null) {
+        await _loadSemester();
       }
     }
   }
+
 }
 
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {

@@ -61,3 +61,4 @@ firebase.json
 # SETUP READMEs created by Copilot
 FIRESTORE_INDEX_SETUP.md
 FIRESTORE_REFACTORING_SUMMARY.md
+*.md
