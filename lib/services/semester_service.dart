@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/semester.dart';
-import '../models/subject.dart';
-import '../models/timetable.dart';
 import 'base_firestore_service.dart';
 import 'user_service.dart';
 
@@ -111,101 +109,7 @@ class SemesterService extends BaseFirestoreService {
     }
   }
 
-  /// Add subject to semester
-  Future<void> addSubjectToSemester(String semesterId, Subject subject) async {
-    ensureAuthenticated();
-    
-    try {
-      final semester = await getSemester(semesterId);
-      if (semester == null) {
-        throw Exception('Semester not found');
-      }
 
-      final updatedSubjects = List<Subject>.from(semester.subjectList)
-        ..add(subject);
-      
-      final updatedSemester = semester.copyWith(subjectList: updatedSubjects);
-      await updateSemester(updatedSemester);
-    } catch (e) {
-      throw Exception('Failed to add subject: ${handleFirestoreError(e)}');
-    }
-  }
-
-  /// Remove subject from semester
-  Future<void> removeSubjectFromSemester(String semesterId, String subjectId) async {
-    ensureAuthenticated();
-    
-    try {
-      final semester = await getSemester(semesterId);
-      if (semester == null) {
-        throw Exception('Semester not found');
-      }
-
-      final updatedSubjects = semester.subjectList
-          .where((subject) => subject.id != subjectId)
-          .toList();
-      
-      final updatedSemester = semester.copyWith(subjectList: updatedSubjects);
-      await updateSemester(updatedSemester);
-    } catch (e) {
-      throw Exception('Failed to remove subject: ${handleFirestoreError(e)}');
-    }
-  }
-
-  /// Update subject in semester
-  Future<void> updateSubjectInSemester(String semesterId, Subject updatedSubject) async {
-    ensureAuthenticated();
-    
-    try {
-      final semester = await getSemester(semesterId);
-      if (semester == null) {
-        throw Exception('Semester not found');
-      }
-
-      final updatedSubjects = semester.subjectList
-          .map((subject) => subject.id == updatedSubject.id ? updatedSubject : subject)
-          .toList();
-      
-      final updatedSemester = semester.copyWith(subjectList: updatedSubjects);
-      await updateSemester(updatedSemester);
-    } catch (e) {
-      throw Exception('Failed to update subject: ${handleFirestoreError(e)}');
-    }
-  }
-
-  /// Update all subjects in semester (useful for batch updates like fixing empty IDs)
-  Future<void> updateSemesterSubjects(String semesterId, List<Subject> subjects) async {
-    ensureAuthenticated();
-    
-    try {
-      final semester = await getSemester(semesterId);
-      if (semester == null) {
-        throw Exception('Semester not found');
-      }
-      
-      final updatedSemester = semester.copyWith(subjectList: subjects);
-      await updateSemester(updatedSemester);
-    } catch (e) {
-      throw Exception('Failed to update subjects: ${handleFirestoreError(e)}');
-    }
-  }
-
-  /// Update timetable for semester
-  Future<void> updateTimeTable(String semesterId, TimeTable timeTable) async {
-    ensureAuthenticated();
-    
-    try {
-      final semester = await getSemester(semesterId);
-      if (semester == null) {
-        throw Exception('Semester not found');
-      }
-
-      final updatedSemester = semester.copyWith(timeTable: timeTable);
-      await updateSemester(updatedSemester);
-    } catch (e) {
-      throw Exception('Failed to update timetable: ${handleFirestoreError(e)}');
-    }
-  }
 
   /// Add holiday to semester
   Future<void> addHolidayToSemester(String semesterId, DateTime holiday) async {
@@ -359,4 +263,6 @@ class SemesterService extends BaseFirestoreService {
       throw Exception('Failed to update holidays: ${handleFirestoreError(e)}');
     }
   }
+
+
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 import '../models/subject.dart';
-import '../services/semester_service.dart';
+import '../services/subject_service.dart';
 import '../theme/app_colors.dart';
 
 class SubjectsScreen extends StatefulWidget {
@@ -17,8 +16,7 @@ class SubjectsScreen extends StatefulWidget {
 }
 
 class _SubjectsScreenState extends State<SubjectsScreen> {
-  final SemesterService _semesterService = SemesterService();
-  final Uuid _uuid = const Uuid();
+  final SubjectService _subjectService = SubjectService();
   List<Subject> _subjects = [];
   bool _isLoading = true;
   String? _selectedSubjectId;
@@ -32,34 +30,11 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
   Future<void> _loadSubjects() async {
     try {
       setState(() => _isLoading = true);
-      final semester = await _semesterService.getSemester(widget.semesterId);
-      if (semester != null) {
-        // Fix any subjects with empty IDs
-        bool needsUpdate = false;
-        final updatedSubjects = semester.subjectList.map((subject) {
-          if (subject.id.isEmpty) {
-            needsUpdate = true;
-            return Subject(
-              id: _uuid.v4(),
-              subjectName: subject.subjectName,
-              teacherName: subject.teacherName,
-              attendanceCredits: subject.attendanceCredits,
-              createdAt: subject.createdAt,
-            );
-          }
-          return subject;
-        }).toList();
-
-        if (needsUpdate) {
-          // Update semester with fixed subjects
-          await _semesterService.updateSemesterSubjects(widget.semesterId, updatedSubjects);
-        }
-
-        setState(() {
-          _subjects = updatedSubjects;
-          _isLoading = false;
-        });
-      }
+      final subjects = await _subjectService.getSubjects(widget.semesterId);
+      setState(() {
+        _subjects = subjects;
+        _isLoading = false;
+      });
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
@@ -210,21 +185,21 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
           createdAt: DateTime.now(),
         );
         
-        await _semesterService.updateSubjectInSemester(
+        await _subjectService.updateSubject(
           widget.semesterId,
           updatedSubject,
         );
       } else {
-        // Add new subject(s)
+        // Add new subject(s) - Firestore will auto-generate document IDs
         final theorySubject = Subject(
-          id: _uuid.v4(), // Generate unique UUID
+          id: '', // Will be replaced with Firestore document ID 
           subjectName: subjectName.trim(),
           teacherName: teacherName.trim().isEmpty ? null : teacherName.trim(),
           attendanceCredits: credits,
           createdAt: DateTime.now(),
         );
         
-        await _semesterService.addSubjectToSemester(
+        await _subjectService.addSubject(
           widget.semesterId,
           theorySubject,
         );
@@ -232,14 +207,14 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
         // If has lab, create lab subject automatically
         if (hasLab) {
           final labSubject = Subject(
-            id: _uuid.v4(), // Generate unique UUID
+            id: '', // Will be replaced with Firestore document ID
             subjectName: '${subjectName.trim()}-LAB',
             teacherName: teacherName.trim().isEmpty ? null : teacherName.trim(),
             attendanceCredits: 2, // Lab gets 2 credits automatically
             createdAt: DateTime.now(),
           );
           
-          await _semesterService.addSubjectToSemester(
+          await _subjectService.addSubject(
             widget.semesterId,
             labSubject,
           );
@@ -290,7 +265,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
 
     if (confirm == true) {
       try {
-        await _semesterService.removeSubjectFromSemester(
+        await _subjectService.removeSubject(
           widget.semesterId,
           subject.id,
         );

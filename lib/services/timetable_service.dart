@@ -1,209 +1,217 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../models/timetable.dart';
 import 'base_firestore_service.dart';
 
 class TimetableService extends BaseFirestoreService {
-  static const String _collection = 'timetables';
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  static const String _semestersCollectionName = 'semesters';
 
-  // Get timetable for a semester
-  Future<TimeTable?> getTimetable(String semesterId) async {
+  /// Get semesters collection reference
+  CollectionReference get _semestersCollection => getCollection(_semestersCollectionName);
+
+  /// Get timetable subcollection reference
+  CollectionReference _getTimetableCollection(String semesterId) {
+    return _semestersCollection.doc(semesterId).collection('timetable');
+  }
+
+  /// Add or update timetable slot
+  Future<void> updateTimeTableSlot(String semesterId, String day, String timeSlot, String subjectId) async {
+    ensureAuthenticated();
+    
     try {
-      final user = _auth.currentUser;
-      if (user == null) throw Exception('User not authenticated');
-
-      final query = await _firestore
-          .collection(_collection)
-          .where('userId', isEqualTo: user.uid)
-          .where('semesterId', isEqualTo: semesterId)
-          .limit(1)
-          .get();
-
-      if (query.docs.isEmpty) {
-        // Create empty timetable if none exists
-        return await _createEmptyTimetable(semesterId);
+      // Check if semester exists
+      final semesterDoc = await _semestersCollection.doc(semesterId).get();
+      if (!semesterDoc.exists) {
+        throw Exception('Semester not found');
       }
 
-      return TimeTable.fromFirestore(query.docs.first);
+      await _getTimetableCollection(semesterId).doc('$day-$timeSlot').set({
+        'day': day,
+        'timeSlot': timeSlot,
+        'subjectId': subjectId,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
     } catch (e) {
-      throw Exception('Failed to get timetable: $e');
+      throw Exception('Failed to update timetable slot: ${handleFirestoreError(e)}');
     }
   }
 
-  // Create empty timetable
-  Future<TimeTable> _createEmptyTimetable(String semesterId) async {
+  /// Get timetable for a specific day
+  Future<Map<String, String>> getDayTimetable(String semesterId, String day) async {
+    ensureAuthenticated();
+    
     try {
-      final user = _auth.currentUser;
-      if (user == null) throw Exception('User not authenticated');
-
-      final now = DateTime.now();
-      final timetableData = {
-        'userId': user.uid,
-        'semesterId': semesterId,
-        'schedule': {
-          for (var day in WeekDay.values) day.name: []
-        },
-        'createdAt': Timestamp.fromDate(now),
-        'updatedAt': Timestamp.fromDate(now),
-      };
-
-      final docRef = await _firestore.collection(_collection).add(timetableData);
+      final snapshot = await _getTimetableCollection(semesterId)
+          .where('day', isEqualTo: day)
+          .get();
       
+      final timetable = <String, String>{};
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        timetable[data['timeSlot']] = data['subjectId'];
+      }
+      
+      return timetable;
+    } catch (e) {
+      throw Exception('Failed to get day timetable: ${handleFirestoreError(e)}');
+    }
+  }
+
+  /// Get full timetable for semester
+  Future<TimeTable> getTimeTable(String semesterId) async {
+    ensureAuthenticated();
+    
+    try {
+      final snapshot = await _getTimetableCollection(semesterId).get();
+      
+      final schedule = <WeekDay, List<TimeSlot>>{
+        for (var day in WeekDay.values) day: <TimeSlot>[]
+      };
+      
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final dayString = data['day'] as String;
+        final timeSlot = data['timeSlot'] as String;
+        final subjectId = data['subjectId'] as String;
+        
+        // Parse timeSlot to get start and end times
+        final timeParts = timeSlot.split('-');
+        final startTime = timeParts[0];
+        final endTime = timeParts.length > 1 ? timeParts[1] : startTime;
+        
+        final slot = TimeSlot(
+          subjectId: subjectId,
+          startTime: startTime,
+          endTime: endTime,
+        );
+        
+        // Add to appropriate day
+        final weekDay = WeekDay.values.firstWhere(
+          (day) => day.displayName.toLowerCase() == dayString.toLowerCase(),
+          orElse: () => WeekDay.monday,
+        );
+        
+        schedule[weekDay]!.add(slot);
+      }
+      
+      final now = DateTime.now();
       return TimeTable(
-        id: docRef.id,
-        schedule: {for (var day in WeekDay.values) day: <TimeSlot>[]},
+        id: semesterId,
+        schedule: schedule,
         createdAt: now,
         updatedAt: now,
       );
     } catch (e) {
-      throw Exception('Failed to create empty timetable: $e');
+      throw Exception('Failed to get timetable: ${handleFirestoreError(e)}');
     }
   }
 
-  // Add time slot to timetable
-  Future<void> addTimeSlot(String semesterId, WeekDay day, TimeSlot timeSlot) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) throw Exception('User not authenticated');
-
-      final timetable = await getTimetable(semesterId);
-      if (timetable == null) throw Exception('Timetable not found');
-
-      // Check for overlaps
-      final existingSlots = timetable.schedule[day] ?? [];
-      for (final existingSlot in existingSlots) {
-        if (timeSlot.overlapsWith(existingSlot)) {
-          throw Exception('Time slot overlaps with existing slot: ${existingSlot.formattedTimeRange}');
-        }
+  /// Stream timetable for semester
+  Stream<TimeTable> streamTimeTable(String semesterId) {
+    return _getTimetableCollection(semesterId)
+        .snapshots()
+        .map((snapshot) {
+      final schedule = <WeekDay, List<TimeSlot>>{
+        for (var day in WeekDay.values) day: <TimeSlot>[]
+      };
+      
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final dayString = data['day'] as String;
+        final timeSlot = data['timeSlot'] as String;
+        final subjectId = data['subjectId'] as String;
+        
+        // Parse timeSlot to get start and end times
+        final timeParts = timeSlot.split('-');
+        final startTime = timeParts[0];
+        final endTime = timeParts.length > 1 ? timeParts[1] : startTime;
+        
+        final slot = TimeSlot(
+          subjectId: subjectId,
+          startTime: startTime,
+          endTime: endTime,
+        );
+        
+        // Add to appropriate day
+        final weekDay = WeekDay.values.firstWhere(
+          (day) => day.displayName.toLowerCase() == dayString.toLowerCase(),
+          orElse: () => WeekDay.monday,
+        );
+        
+        schedule[weekDay]!.add(slot);
       }
-
-      // Add the new slot
-      final updatedSlots = [...existingSlots, timeSlot];
-      updatedSlots.sort((a, b) => _timeToMinutes(a.startTime)
-          .compareTo(_timeToMinutes(b.startTime)));
-
-      final updatedSchedule = Map<WeekDay, List<TimeSlot>>.from(timetable.schedule);
-      updatedSchedule[day] = updatedSlots;
-
-      final updatedTimetable = timetable.copyWith(
-        schedule: updatedSchedule,
-        updatedAt: DateTime.now(),
+      
+      final now = DateTime.now();
+      return TimeTable(
+        id: semesterId,
+        schedule: schedule,
+        createdAt: now,
+        updatedAt: now,
       );
+    });
+  }
 
-      await _firestore
-          .collection(_collection)
-          .doc(timetable.id)
-          .update(updatedTimetable.toJson());
-
+  /// Remove timetable slot
+  Future<void> removeTimeTableSlot(String semesterId, String day, String timeSlot) async {
+    ensureAuthenticated();
+    
+    try {
+      await _getTimetableCollection(semesterId).doc('$day-$timeSlot').delete();
     } catch (e) {
-      throw Exception('Failed to add time slot: $e');
+      throw Exception('Failed to remove timetable slot: ${handleFirestoreError(e)}');
     }
   }
 
-  // Remove time slot from timetable
-  Future<void> removeTimeSlot(String semesterId, WeekDay day, int slotIndex) async {
+  /// Get all time slots for a semester (useful for analytics)
+  Future<List<Map<String, dynamic>>> getAllTimeSlots(String semesterId) async {
+    ensureAuthenticated();
+    
     try {
-      final user = _auth.currentUser;
-      if (user == null) throw Exception('User not authenticated');
-
-      final timetable = await getTimetable(semesterId);
-      if (timetable == null) throw Exception('Timetable not found');
-
-      final existingSlots = List<TimeSlot>.from(timetable.schedule[day] ?? []);
-      if (slotIndex < 0 || slotIndex >= existingSlots.length) {
-        throw Exception('Invalid slot index');
-      }
-
-      existingSlots.removeAt(slotIndex);
-
-      final updatedSchedule = Map<WeekDay, List<TimeSlot>>.from(timetable.schedule);
-      updatedSchedule[day] = existingSlots;
-
-      final updatedTimetable = timetable.copyWith(
-        schedule: updatedSchedule,
-        updatedAt: DateTime.now(),
-      );
-
-      await _firestore
-          .collection(_collection)
-          .doc(timetable.id)
-          .update(updatedTimetable.toJson());
-
+      final snapshot = await _getTimetableCollection(semesterId).get();
+      
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {
+          'id': doc.id,
+          'day': data['day'],
+          'timeSlot': data['timeSlot'],
+          'subjectId': data['subjectId'],
+          'updatedAt': data['updatedAt'],
+        };
+      }).toList();
     } catch (e) {
-      throw Exception('Failed to remove time slot: $e');
+      throw Exception('Failed to get all time slots: ${handleFirestoreError(e)}');
     }
   }
 
-  // Update time slot in timetable
-  Future<void> updateTimeSlot(String semesterId, WeekDay day, int slotIndex, TimeSlot updatedTimeSlot) async {
+  /// Check if a time slot conflicts with existing slots
+  Future<bool> hasTimeConflict(String semesterId, String day, String timeSlot, {String? excludeSlotId}) async {
+    ensureAuthenticated();
+    
     try {
-      final user = _auth.currentUser;
-      if (user == null) throw Exception('User not authenticated');
-
-      final timetable = await getTimetable(semesterId);
-      if (timetable == null) throw Exception('Timetable not found');
-
-      final existingSlots = List<TimeSlot>.from(timetable.schedule[day] ?? []);
-      if (slotIndex < 0 || slotIndex >= existingSlots.length) {
-        throw Exception('Invalid slot index');
-      }
-
-      // Check for overlaps with other slots (excluding the slot being updated)
-      for (int i = 0; i < existingSlots.length; i++) {
-        if (i != slotIndex && updatedTimeSlot.overlapsWith(existingSlots[i])) {
-          throw Exception('Time slot overlaps with existing slot: ${existingSlots[i].formattedTimeRange}');
-        }
-      }
-
-      existingSlots[slotIndex] = updatedTimeSlot;
-      existingSlots.sort((a, b) => _timeToMinutes(a.startTime)
-          .compareTo(_timeToMinutes(b.startTime)));
-
-      final updatedSchedule = Map<WeekDay, List<TimeSlot>>.from(timetable.schedule);
-      updatedSchedule[day] = existingSlots;
-
-      final updatedTimetable = timetable.copyWith(
-        schedule: updatedSchedule,
-        updatedAt: DateTime.now(),
-      );
-
-      await _firestore
-          .collection(_collection)
-          .doc(timetable.id)
-          .update(updatedTimetable.toJson());
-
-    } catch (e) {
-      throw Exception('Failed to update time slot: $e');
-    }
-  }
-
-  // Delete entire timetable
-  Future<void> deleteTimetable(String semesterId) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) throw Exception('User not authenticated');
-
-      final query = await _firestore
-          .collection(_collection)
-          .where('userId', isEqualTo: user.uid)
-          .where('semesterId', isEqualTo: semesterId)
+      final snapshot = await _getTimetableCollection(semesterId)
+          .where('day', isEqualTo: day)
+          .where('timeSlot', isEqualTo: timeSlot)
           .get();
-
-      for (final doc in query.docs) {
-        await doc.reference.delete();
+      
+      if (excludeSlotId != null) {
+        return snapshot.docs.any((doc) => doc.id != excludeSlotId);
       }
+      
+      return snapshot.docs.isNotEmpty;
     } catch (e) {
-      throw Exception('Failed to delete timetable: $e');
+      return false;
     }
   }
 
-  // Helper method to convert time string to minutes
-  int _timeToMinutes(String time) {
-    final parts = time.split(':');
-    final hours = int.parse(parts[0]);
-    final minutes = int.parse(parts[1]);
-    return hours * 60 + minutes;
+  /// Get timetable slot count for a semester
+  Future<int> getTimetableSlotCount(String semesterId) async {
+    ensureAuthenticated();
+    
+    try {
+      final snapshot = await _getTimetableCollection(semesterId).get();
+      return snapshot.docs.length;
+    } catch (e) {
+      throw Exception('Failed to get timetable slot count: ${handleFirestoreError(e)}');
+    }
   }
 }

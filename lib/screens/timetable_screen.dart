@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/timetable.dart';
 import '../models/subject.dart';
 import '../services/timetable_service.dart';
-import '../services/semester_service.dart';
+import '../services/subject_service.dart';
 import '../theme/app_colors.dart';
 
 class TimetableScreen extends StatefulWidget {
@@ -19,7 +19,7 @@ class TimetableScreen extends StatefulWidget {
 
 class _TimetableScreenState extends State<TimetableScreen> {
   final TimetableService _timetableService = TimetableService();
-  final SemesterService _semesterService = SemesterService();
+  final SubjectService _subjectService = SubjectService();
   
   TimeTable? _timetable;
   List<Subject> _subjects = [];
@@ -36,15 +36,15 @@ class _TimetableScreenState extends State<TimetableScreen> {
     try {
       setState(() => _isLoading = true);
       
-      // Load timetable and subjects
-      final timetableFuture = _timetableService.getTimetable(widget.semesterId);
-      final semesterFuture = _semesterService.getSemester(widget.semesterId);
+      // Load timetable and subjects from subcollections
+      final timetableFuture = _timetableService.getTimeTable(widget.semesterId);
+      final subjectsFuture = _subjectService.getSubjects(widget.semesterId);
       
-      final results = await Future.wait([timetableFuture, semesterFuture]);
+      final results = await Future.wait([timetableFuture, subjectsFuture]);
       
       setState(() {
         _timetable = results[0] as TimeTable?;
-        _subjects = (results[1] as dynamic)?.subjectList ?? [];
+        _subjects = results[1] as List<Subject>;
         
         // Filter out subjects with empty or null IDs to prevent dropdown issues
         _subjects = _subjects.where((subject) => 
@@ -158,7 +158,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                     border: OutlineInputBorder(),
                     hintText: '09:00',
                   ),
-                  onTap: () => _selectTime(context, startTimeController),
+                  onTap: () => _selectStartTime(context, startTimeController, endTimeController, setDialogState),
                   readOnly: true,
                 ),
                 
@@ -232,6 +232,32 @@ class _TimetableScreenState extends State<TimetableScreen> {
     }
   }
 
+  Future<void> _selectStartTime(
+    BuildContext context, 
+    TextEditingController startController, 
+    TextEditingController endController,
+    void Function(VoidCallback) setDialogState,
+  ) async {
+    final currentTime = TimeOfDay(hour: 9, minute: 0); // Default to 9 AM
+    final selectedTime = await showTimePicker(
+      context: context,
+      initialTime: currentTime,
+    );
+    
+    if (selectedTime != null) {
+      final formattedStartTime = '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
+      
+      // Auto-calculate end time (1 hour after start time)
+      final endHour = selectedTime.hour + 1;
+      final formattedEndTime = '${endHour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
+      
+      setDialogState(() {
+        startController.text = formattedStartTime;
+        endController.text = formattedEndTime;
+      });
+    }
+  }
+
   Future<void> _saveSlot(
     bool isEditing,
     int? slotIndex,
@@ -258,27 +284,15 @@ class _TimetableScreenState extends State<TimetableScreen> {
     try {
       Navigator.pop(context); // Close dialog
 
-      final timeSlot = TimeSlot(
-        subjectId: subjectId,
-        startTime: startTime,
-        endTime: endTime,
-        room: room.trim().isEmpty ? null : room.trim(),
+      final timeSlotString = '$startTime-$endTime';
+      
+      // Update timetable slot using the new subcollection structure
+      await _timetableService.updateTimeTableSlot(
+        widget.semesterId,
+        _selectedDay.displayName,
+        timeSlotString,
+        subjectId,
       );
-
-      if (isEditing && slotIndex != null) {
-        await _timetableService.updateTimeSlot(
-          widget.semesterId,
-          _selectedDay,
-          slotIndex,
-          timeSlot,
-        );
-      } else {
-        await _timetableService.addTimeSlot(
-          widget.semesterId,
-          _selectedDay,
-          timeSlot,
-        );
-      }
 
       await _loadData();
       
@@ -334,11 +348,18 @@ class _TimetableScreenState extends State<TimetableScreen> {
 
     if (confirm == true) {
       try {
-        await _timetableService.removeTimeSlot(
-          widget.semesterId,
-          _selectedDay,
-          slotIndex,
-        );
+        // Get the slot to remove
+        final slots = _timetable!.schedule[_selectedDay] ?? [];
+        if (slotIndex < slots.length) {
+          final slot = slots[slotIndex];
+          final timeSlotString = '${slot.startTime}-${slot.endTime}';
+          
+          await _timetableService.removeTimeTableSlot(
+            widget.semesterId,
+            _selectedDay.displayName,
+            timeSlotString,
+          );
+        }
         await _loadData();
         
         if (mounted) {

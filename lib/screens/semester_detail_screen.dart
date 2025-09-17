@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/semester_service.dart';
+import '../services/subject_service.dart';
 import '../models/semester.dart';
+import '../models/subject.dart';
 import 'package:intl/intl.dart';
 import 'holiday_screen.dart';
 import 'subjects_screen.dart';
@@ -21,7 +23,9 @@ class SemesterDetailScreen extends StatefulWidget {
 class _SemesterDetailScreenState extends State<SemesterDetailScreen>
     with SingleTickerProviderStateMixin {
   final SemesterService _semesterService = SemesterService();
+  final SubjectService _subjectService = SubjectService();
   Semester? _semester;
+  int _subjectCount = 0;
   bool _isLoading = true;
   String? _error;
   
@@ -42,9 +46,16 @@ class _SemesterDetailScreenState extends State<SemesterDetailScreen>
 
   Future<void> _loadSemester() async {
     try {
-      final semester = await _semesterService.getSemester(widget.semesterId);
+      final semesterFuture = _semesterService.getSemester(widget.semesterId);
+      final subjectsFuture = _subjectService.getSubjects(widget.semesterId);
+      
+      final results = await Future.wait([semesterFuture, subjectsFuture]);
+      final semester = results[0] as Semester?;
+      final subjects = results[1] as List<Subject>;
+      
       setState(() {
         _semester = semester;
+        _subjectCount = subjects.length;
         _isLoading = false;
         _error = semester == null ? 'Semester not found' : null;
       });
@@ -227,7 +238,7 @@ class _SemesterDetailScreenState extends State<SemesterDetailScreen>
           
           _buildNavigationCard(
             title: 'Subjects',
-            subtitle: '${_semester!.subjectList.length} subjects',
+            subtitle: '$_subjectCount subjects',
             icon: Icons.subject,
             color: Colors.purple,
             onTap: () {
