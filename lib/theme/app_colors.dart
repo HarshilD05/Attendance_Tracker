@@ -4,27 +4,27 @@ import 'package:flutter/services.dart';
 
 class AppColors {
   // Light theme colors
-  static Color primary = const Color(0xFF22C55E);
-  static Color primaryLight = const Color(0xFF4ADE80);
-  static Color primaryDark = const Color(0xFF16A34A);
-  static Color secondary = const Color(0xFF10B981);
-  static Color accent = const Color(0xFF059669);
+  static Color primary = const Color(0xFF00D87B);
+  static Color primaryLight = const Color(0xFF4EEAA5);
+  static Color primaryDark = const Color(0xFF00B866);
+  static Color secondary = const Color(0xFF00C471);
+  static Color accent = const Color(0xFF00F085);
   
-  static Color background = const Color(0xFFF8FAFC);
+  static Color background = const Color(0xFFF8FFFE);
   static Color surface = const Color(0xFFFFFFFF);
   static Color card = const Color(0xFFFFFFFF);
-  static Color cardElevated = const Color(0xFFF1F5F9);
+  static Color cardElevated = const Color(0xFFF0FFFC);
   
-  static Color textPrimary = const Color(0xFF1E293B);
-  static Color textSecondary = const Color(0xFF64748B);
-  static Color textMuted = const Color(0xFF94A3B8);
+  static Color textPrimary = const Color(0xFF1A2E2A);
+  static Color textSecondary = const Color(0xFF4A6B5A);
+  static Color textMuted = const Color(0xFF7A9B8A);
   
-  static Color border = const Color(0xFFE2E8F0);
-  static Color divider = const Color(0xFFF1F5F9);
+  static Color border = const Color(0xFFE0F2E8);
+  static Color divider = const Color(0xFFF0FFF8);
   
   static Color error = const Color(0xFFEF4444);
   static Color warning = const Color(0xFFF59E0B);
-  static Color success = const Color(0xFF10B981);
+  static Color success = const Color(0xFF00D87B);
   static Color info = const Color(0xFF3B82F6);
 
   // Current theme mode

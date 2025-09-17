@@ -173,6 +173,23 @@ class SemesterService extends BaseFirestoreService {
     }
   }
 
+  /// Update all subjects in semester (useful for batch updates like fixing empty IDs)
+  Future<void> updateSemesterSubjects(String semesterId, List<Subject> subjects) async {
+    ensureAuthenticated();
+    
+    try {
+      final semester = await getSemester(semesterId);
+      if (semester == null) {
+        throw Exception('Semester not found');
+      }
+      
+      final updatedSemester = semester.copyWith(subjectList: subjects);
+      await updateSemester(updatedSemester);
+    } catch (e) {
+      throw Exception('Failed to update subjects: ${handleFirestoreError(e)}');
+    }
+  }
+
   /// Update timetable for semester
   Future<void> updateTimeTable(String semesterId, TimeTable timeTable) async {
     ensureAuthenticated();

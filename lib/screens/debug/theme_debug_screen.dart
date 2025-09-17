@@ -110,7 +110,7 @@ class _ThemeDebugScreenState extends State<ThemeDebugScreen> {
 
   Color _getContrastColor(Color color) {
     // Simple contrast calculation
-    double luminance = (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue) / 255;
+    double luminance = (0.299 * color.r + 0.587 * color.g + 0.114 * color.b) / 255;
     return luminance > 0.5 ? Colors.black : Colors.white;
   }
 }

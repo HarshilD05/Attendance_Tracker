@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_theme.dart';
 import '../theme/theme_manager.dart';
 import '../services/auth_service.dart';
 import '../widgets/auth_wrapper.dart';
@@ -204,6 +203,14 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: _navigateToProfile,
             ),
             ListTile(
+              leading: const Icon(Icons.school_outlined),
+              title: const Text('Semesters'),
+              onTap: () {
+                Navigator.of(context).pop(); // Close drawer
+                Navigator.pushNamed(context, '/semesters');
+              },
+            ),
+            ListTile(
               leading: Icon(_themeManager.isDarkMode 
                   ? Icons.light_mode 
                   : Icons.dark_mode),
@@ -239,74 +246,73 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      body: Container(
-        decoration: AppTheme.getGradientDecoration(),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height - 
-                           MediaQuery.of(context).padding.top - 
-                           kToolbarHeight,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                Icon(
-                  Icons.school,
-                  size: 120,
-                  color: AppColors.primary,
-                ),
-                const SizedBox(height: 24),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Welcome Section
+                const SizedBox(height: 20),
                 Text(
-                  'Welcome to BunkMate!',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  'Hello, ${_currentUser?.displayName?.split(' ').first ?? 'Student'}!',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.primary,
+                    color: AppColors.textPrimary,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 Text(
-                  'Your personal attendance companion',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  'Track your attendance and stay on top of your classes',
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     color: AppColors.textSecondary,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 48),
                 
                 const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                
+                // Quick Actions
+                Text(
+                  'Quick Actions',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 1.2,
                   children: [
-                    _buildFeatureCard(
+                    _buildActionCard(
                       context,
                       icon: Icons.school,
                       title: 'Semesters',
-                      subtitle: 'Manage semesters',
+                      subtitle: 'Manage your semesters',
                       onTap: () => Navigator.pushNamed(context, '/semesters'),
                     ),
-                    _buildFeatureCard(
+                    _buildActionCard(
+                      context,
+                      icon: Icons.analytics,
+                      title: 'Analytics',
+                      subtitle: 'View attendance stats',
+                    ),
+                    _buildActionCard(
                       context,
                       icon: Icons.notifications,
                       title: 'Reminders',
                       subtitle: 'Never miss a class',
                     ),
-                    _buildFeatureCard(
-                      context,
-                      icon: Icons.analytics,
-                      title: 'Analytics',
-                      subtitle: 'View your stats',
-                    ),
                   ],
                 ),
               ],
-            ),
-          ),
             ),
           ),
         ),
@@ -314,45 +320,72 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildFeatureCard(
+  Widget _buildActionCard(
     BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
     VoidCallback? onTap,
   }) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          decoration: AppTheme.getCardDecoration(elevation: 2),
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                size: 32,
-                color: AppColors.primary,
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 340),
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppColors.border,
+                width: 1,
               ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.getCardShadow(),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
+              ],
+            ),
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 24,
+                    color: AppColors.primary,
+                  ),
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ),
       ),

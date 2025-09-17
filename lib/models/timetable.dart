@@ -71,6 +71,27 @@ class TimeSlot {
     );
   }
 
+  // Helper method to check if this slot overlaps with another
+  bool overlapsWith(TimeSlot other) {
+    final thisStart = _timeToMinutes(startTime);
+    final thisEnd = _timeToMinutes(endTime);
+    final otherStart = _timeToMinutes(other.startTime);
+    final otherEnd = _timeToMinutes(other.endTime);
+    
+    return (thisStart < otherEnd && thisEnd > otherStart);
+  }
+
+  // Helper method to convert time string to minutes
+  static int _timeToMinutes(String time) {
+    final parts = time.split(':');
+    final hours = int.parse(parts[0]);
+    final minutes = int.parse(parts[1]);
+    return hours * 60 + minutes;
+  }
+
+  // Helper method to format time for display
+  String get formattedTimeRange => '$startTime - $endTime';
+
   @override
   String toString() {
     return 'TimeSlot(subjectId: $subjectId, startTime: $startTime, endTime: $endTime, room: $room)';
