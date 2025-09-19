@@ -12,6 +12,30 @@ class SemesterScreen extends StatefulWidget {
 
 class _SemesterScreenState extends State<SemesterScreen> {
   final SemesterService _semesterService = SemesterService();
+  final Map<String, Map<String, dynamic>> _semesterStats = {};
+
+  Future<Map<String, dynamic>> _getSemesterStats(String semesterId) async {
+    if (_semesterStats.containsKey(semesterId)) {
+      return _semesterStats[semesterId]!;
+    }
+    
+    try {
+      final stats = await _semesterService.getSemesterStats(semesterId);
+      _semesterStats[semesterId] = stats;
+      return stats;
+    } catch (e) {
+      // Return default stats on error
+      return {
+        'subjects': 0,
+        'workingDays': 0,
+        'holidays': 0,
+        'totalDays': 0,
+        'daysPassed': 0,
+        'progressPercentage': 0,
+        'isActive': false,
+      };
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +108,13 @@ class _SemesterScreenState extends State<SemesterScreen> {
               itemCount: semesters.length,
               itemBuilder: (context, index) {
                 final semester = semesters[index];
-                return _buildSemesterCard(context, semester, theme);
+                return FutureBuilder<Map<String, dynamic>>(
+                  future: _getSemesterStats(semester.id!),
+                  builder: (context, statsSnapshot) {
+                    final stats = statsSnapshot.data ?? {};
+                    return _buildSemesterCard(context, semester, stats, theme);
+                  },
+                );
               },
             ),
           );
@@ -148,9 +178,8 @@ class _SemesterScreenState extends State<SemesterScreen> {
     );
   }
 
-  Widget _buildSemesterCard(BuildContext context, Semester semester, ThemeData theme) {
-    final now = DateTime.now();
-    final isActive = now.isAfter(semester.semStartDate) && now.isBefore(semester.semEndDate);
+  Widget _buildSemesterCard(BuildContext context, Semester semester, Map<String, dynamic> stats, ThemeData theme) {
+    final isActive = stats['isActive'] as bool? ?? false;
     final dateFormat = DateFormat('MMM dd, yyyy');
     
     return Container(
@@ -232,7 +261,7 @@ class _SemesterScreenState extends State<SemesterScreen> {
                     _buildStatItem(
                       context,
                       Icons.subject,
-                      '${semester.subjectList.length}',
+                      '${stats['subjects'] ?? 0}',
                       'Subjects',
                       theme,
                     ),
@@ -240,7 +269,7 @@ class _SemesterScreenState extends State<SemesterScreen> {
                     _buildStatItem(
                       context,
                       Icons.schedule,
-                      '${semester.totalWorkingDays}',
+                      '${stats['workingDays'] ?? 0}',
                       'Working Days',
                       theme,
                     ),
@@ -248,7 +277,7 @@ class _SemesterScreenState extends State<SemesterScreen> {
                     _buildStatItem(
                       context,
                       Icons.event_busy,
-                      '${semester.holidayList.length}',
+                      '${stats['holidays'] ?? 0}',
                       'Holidays',
                       theme,
                     ),
@@ -258,7 +287,7 @@ class _SemesterScreenState extends State<SemesterScreen> {
                 // Progress indicator
                 if (isActive) ...[
                   const SizedBox(height: 16),
-                  _buildProgressIndicator(semester, theme),
+                  _buildProgressIndicator(semester, stats, theme),
                 ],
                 
                 const SizedBox(height: 16),
@@ -336,11 +365,9 @@ class _SemesterScreenState extends State<SemesterScreen> {
     );
   }
 
-  Widget _buildProgressIndicator(Semester semester, ThemeData theme) {
-    final now = DateTime.now();
-    final totalDays = semester.semEndDate.difference(semester.semStartDate).inDays;
-    final passedDays = now.difference(semester.semStartDate).inDays;
-    final progress = passedDays / totalDays;
+  Widget _buildProgressIndicator(Semester semester, Map<String, dynamic> stats, ThemeData theme) {
+    final progressPercentage = (stats['progressPercentage'] as int? ?? 0);
+    final progress = progressPercentage / 100.0;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,7 +382,7 @@ class _SemesterScreenState extends State<SemesterScreen> {
               ),
             ),
             Text(
-              '${(progress * 100).toInt()}%',
+              '$progressPercentage%',
               style: theme.textTheme.labelMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.primary,
@@ -366,7 +393,7 @@ class _SemesterScreenState extends State<SemesterScreen> {
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: progress.clamp(0.0, 1.0),
-          backgroundColor: theme.colorScheme.surfaceVariant,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
           valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
         ),
       ],

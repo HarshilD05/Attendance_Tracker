@@ -73,16 +73,16 @@ class TimeSlot {
 
   // Helper method to check if this slot overlaps with another
   bool overlapsWith(TimeSlot other) {
-    final thisStart = _timeToMinutes(startTime);
-    final thisEnd = _timeToMinutes(endTime);
-    final otherStart = _timeToMinutes(other.startTime);
-    final otherEnd = _timeToMinutes(other.endTime);
+    final thisStart = TimeSlot.timeToMinutes(startTime);
+    final thisEnd = TimeSlot.timeToMinutes(endTime);
+    final otherStart = TimeSlot.timeToMinutes(other.startTime);
+    final otherEnd = TimeSlot.timeToMinutes(other.endTime);
     
     return (thisStart < otherEnd && thisEnd > otherStart);
   }
 
   // Helper method to convert time string to minutes
-  static int _timeToMinutes(String time) {
+  static int timeToMinutes(String time) {
     final parts = time.split(':');
     final hours = int.parse(parts[0]);
     final minutes = int.parse(parts[1]);
@@ -95,6 +95,124 @@ class TimeSlot {
   @override
   String toString() {
     return 'TimeSlot(subjectId: $subjectId, startTime: $startTime, endTime: $endTime, room: $room)';
+  }
+}
+
+class DaySchedule {
+  final WeekDay day;
+  final List<TimeSlot> timeSlots;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  DaySchedule({
+    required this.day,
+    required this.timeSlots,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory DaySchedule.empty(WeekDay day) {
+    final now = DateTime.now();
+    return DaySchedule(
+      day: day,
+      timeSlots: <TimeSlot>[],
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  factory DaySchedule.fromJson(Map<String, dynamic> json, WeekDay day) {
+    final slotsJson = json['timeSlots'] as List<dynamic>? ?? [];
+    final timeSlots = slotsJson
+        .map((slot) => TimeSlot.fromJson(slot as Map<String, dynamic>))
+        .toList();
+
+    // Sort time slots by start time
+    timeSlots.sort((a, b) {
+      final aMinutes = TimeSlot.timeToMinutes(a.startTime);
+      final bMinutes = TimeSlot.timeToMinutes(b.startTime);
+      return aMinutes.compareTo(bMinutes);
+    });
+
+    return DaySchedule(
+      day: day,
+      timeSlots: timeSlots,
+      createdAt: (json['createdAt'] as Timestamp).toDate(),
+      updatedAt: (json['updatedAt'] as Timestamp).toDate(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    // Sort time slots by start time before storing
+    final sortedSlots = List<TimeSlot>.from(timeSlots);
+    sortedSlots.sort((a, b) {
+      final aMinutes = TimeSlot.timeToMinutes(a.startTime);
+      final bMinutes = TimeSlot.timeToMinutes(b.startTime);
+      return aMinutes.compareTo(bMinutes);
+    });
+
+    return {
+      'day': day.name,
+      'timeSlots': sortedSlots.map((slot) => slot.toJson()).toList(),
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+    };
+  }
+
+  factory DaySchedule.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final dayName = doc.id; // Document ID will be the day name
+    final day = WeekDay.values.firstWhere(
+      (d) => d.name == dayName,
+      orElse: () => WeekDay.monday,
+    );
+    return DaySchedule.fromJson(data, day);
+  }
+
+  DaySchedule copyWith({
+    WeekDay? day,
+    List<TimeSlot>? timeSlots,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return DaySchedule(
+      day: day ?? this.day,
+      timeSlots: timeSlots ?? List.from(this.timeSlots),
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
+    );
+  }
+
+  // Add a time slot and maintain sorting
+  DaySchedule addTimeSlot(TimeSlot slot) {
+    final newSlots = List<TimeSlot>.from(timeSlots);
+    newSlots.add(slot);
+    newSlots.sort((a, b) {
+      final aMinutes = TimeSlot.timeToMinutes(a.startTime);
+      final bMinutes = TimeSlot.timeToMinutes(b.startTime);
+      return aMinutes.compareTo(bMinutes);
+    });
+    
+    return copyWith(timeSlots: newSlots);
+  }
+
+  // Remove a time slot by subject ID and time
+  DaySchedule removeTimeSlot(String subjectId, String startTime) {
+    final newSlots = timeSlots
+        .where((slot) => !(slot.subjectId == subjectId && slot.startTime == startTime))
+        .toList();
+    
+    return copyWith(timeSlots: newSlots);
+  }
+
+  // Check if there are any time conflicts with a new slot
+  bool hasTimeConflict(TimeSlot newSlot) {
+    return timeSlots.any((slot) => slot.overlapsWith(newSlot));
+  }
+
+  @override
+  String toString() {
+    return 'DaySchedule(day: $day, timeSlots: $timeSlots)';
   }
 }
 

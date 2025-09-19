@@ -126,7 +126,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
               children: [
                 // Subject dropdown
                 DropdownButtonFormField<String>(
-                  value: selectedSubjectId,
+                  initialValue: selectedSubjectId,
                   decoration: const InputDecoration(
                     labelText: 'Subject',
                     border: OutlineInputBorder(),
@@ -178,11 +178,11 @@ class _TimetableScreenState extends State<TimetableScreen> {
                 
                 const SizedBox(height: 16),
                 
-                // Room (optional)
+                // Room Number (optional)
                 TextField(
                   controller: roomController,
                   decoration: const InputDecoration(
-                    labelText: 'Room (Optional)',
+                    labelText: 'Room Number (Optional)',
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -284,14 +284,33 @@ class _TimetableScreenState extends State<TimetableScreen> {
     try {
       Navigator.pop(context); // Close dialog
 
-      final timeSlotString = '$startTime-$endTime';
+      // Create a new TimeSlot object
+      final timeSlot = TimeSlot(
+        subjectId: subjectId,
+        startTime: startTime,
+        endTime: endTime,
+        room: room.isNotEmpty ? room : null,
+      );
+
+      if (isEditing && slotIndex != null) {
+        // For editing, we need to remove the old slot and add the new one
+        final daySlots = _timetable!.schedule[_selectedDay] ?? [];
+        if (slotIndex < daySlots.length) {
+          final oldSlot = daySlots[slotIndex];
+          await _timetableService.removeTimeSlot(
+            widget.semesterId, 
+            _selectedDay, 
+            oldSlot.subjectId, 
+            oldSlot.startTime
+          );
+        }
+      }
       
-      // Update timetable slot using the new subcollection structure
-      await _timetableService.updateTimeTableSlot(
+      // Add the new time slot
+      await _timetableService.addTimeSlot(
         widget.semesterId,
-        _selectedDay.displayName,
-        timeSlotString,
-        subjectId,
+        _selectedDay,
+        timeSlot,
       );
 
       await _loadData();
@@ -352,12 +371,12 @@ class _TimetableScreenState extends State<TimetableScreen> {
         final slots = _timetable!.schedule[_selectedDay] ?? [];
         if (slotIndex < slots.length) {
           final slot = slots[slotIndex];
-          final timeSlotString = '${slot.startTime}-${slot.endTime}';
           
-          await _timetableService.removeTimeTableSlot(
+          await _timetableService.removeTimeSlot(
             widget.semesterId,
-            _selectedDay.displayName,
-            timeSlotString,
+            _selectedDay,
+            slot.subjectId,
+            slot.startTime,
           );
         }
         await _loadData();

@@ -8,13 +8,13 @@ class TimetableService extends BaseFirestoreService {
   /// Get semesters collection reference
   CollectionReference get _semestersCollection => getCollection(_semestersCollectionName);
 
-  /// Get timetable subcollection reference
+  /// Get timetable subcollection reference (days collection)
   CollectionReference _getTimetableCollection(String semesterId) {
     return _semestersCollection.doc(semesterId).collection('timetable');
   }
 
-  /// Add or update timetable slot
-  Future<void> updateTimeTableSlot(String semesterId, String day, String timeSlot, String subjectId) async {
+  /// Add or update a time slot in a day's schedule
+  Future<void> addTimeSlot(String semesterId, WeekDay day, TimeSlot timeSlot) async {
     ensureAuthenticated();
     
     try {
@@ -24,35 +24,49 @@ class TimetableService extends BaseFirestoreService {
         throw Exception('Semester not found');
       }
 
-      await _getTimetableCollection(semesterId).doc('$day-$timeSlot').set({
-        'day': day,
-        'timeSlot': timeSlot,
-        'subjectId': subjectId,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+      final dayDoc = _getTimetableCollection(semesterId).doc(day.name);
+      
+      // Check if day document exists
+      final daySnapshot = await dayDoc.get();
+      
+      if (daySnapshot.exists) {
+        // Get current day schedule
+        final daySchedule = DaySchedule.fromFirestore(daySnapshot);
+        
+        // Check for time conflicts
+        if (daySchedule.hasTimeConflict(timeSlot)) {
+          throw Exception('Time slot conflicts with existing schedule');
+        }
+        
+        // Add the new time slot
+        final updatedSchedule = daySchedule.addTimeSlot(timeSlot);
+        
+        // Update the document
+        await dayDoc.set(updatedSchedule.toJson());
+      } else {
+        // Create new day schedule with the time slot
+        final daySchedule = DaySchedule.empty(day).addTimeSlot(timeSlot);
+        await dayDoc.set(daySchedule.toJson());
+      }
     } catch (e) {
-      throw Exception('Failed to update timetable slot: ${handleFirestoreError(e)}');
+      throw Exception('Failed to add time slot: ${handleFirestoreError(e)}');
     }
   }
 
-  /// Get timetable for a specific day
-  Future<Map<String, String>> getDayTimetable(String semesterId, String day) async {
+  /// Get schedule for a specific day
+  Future<DaySchedule?> getDaySchedule(String semesterId, WeekDay day) async {
     ensureAuthenticated();
     
     try {
-      final snapshot = await _getTimetableCollection(semesterId)
-          .where('day', isEqualTo: day)
-          .get();
+      final dayDoc = await _getTimetableCollection(semesterId).doc(day.name).get();
       
-      final timetable = <String, String>{};
-      for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        timetable[data['timeSlot']] = data['subjectId'];
+      if (!dayDoc.exists) {
+        return null;
       }
       
-      return timetable;
+      return DaySchedule.fromFirestore(dayDoc);
     } catch (e) {
-      throw Exception('Failed to get day timetable: ${handleFirestoreError(e)}');
+      throw Exception('Failed to get day schedule: ${handleFirestoreError(e)}');
     }
   }
 
@@ -68,29 +82,8 @@ class TimetableService extends BaseFirestoreService {
       };
       
       for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final dayString = data['day'] as String;
-        final timeSlot = data['timeSlot'] as String;
-        final subjectId = data['subjectId'] as String;
-        
-        // Parse timeSlot to get start and end times
-        final timeParts = timeSlot.split('-');
-        final startTime = timeParts[0];
-        final endTime = timeParts.length > 1 ? timeParts[1] : startTime;
-        
-        final slot = TimeSlot(
-          subjectId: subjectId,
-          startTime: startTime,
-          endTime: endTime,
-        );
-        
-        // Add to appropriate day
-        final weekDay = WeekDay.values.firstWhere(
-          (day) => day.displayName.toLowerCase() == dayString.toLowerCase(),
-          orElse: () => WeekDay.monday,
-        );
-        
-        schedule[weekDay]!.add(slot);
+        final daySchedule = DaySchedule.fromFirestore(doc);
+        schedule[daySchedule.day] = daySchedule.timeSlots;
       }
       
       final now = DateTime.now();
@@ -115,29 +108,8 @@ class TimetableService extends BaseFirestoreService {
       };
       
       for (final doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final dayString = data['day'] as String;
-        final timeSlot = data['timeSlot'] as String;
-        final subjectId = data['subjectId'] as String;
-        
-        // Parse timeSlot to get start and end times
-        final timeParts = timeSlot.split('-');
-        final startTime = timeParts[0];
-        final endTime = timeParts.length > 1 ? timeParts[1] : startTime;
-        
-        final slot = TimeSlot(
-          subjectId: subjectId,
-          startTime: startTime,
-          endTime: endTime,
-        );
-        
-        // Add to appropriate day
-        final weekDay = WeekDay.values.firstWhere(
-          (day) => day.displayName.toLowerCase() == dayString.toLowerCase(),
-          orElse: () => WeekDay.monday,
-        );
-        
-        schedule[weekDay]!.add(slot);
+        final daySchedule = DaySchedule.fromFirestore(doc);
+        schedule[daySchedule.day] = daySchedule.timeSlots;
       }
       
       final now = DateTime.now();
@@ -150,14 +122,30 @@ class TimetableService extends BaseFirestoreService {
     });
   }
 
-  /// Remove timetable slot
-  Future<void> removeTimeTableSlot(String semesterId, String day, String timeSlot) async {
+  /// Remove a time slot from a day's schedule
+  Future<void> removeTimeSlot(String semesterId, WeekDay day, String subjectId, String startTime) async {
     ensureAuthenticated();
     
     try {
-      await _getTimetableCollection(semesterId).doc('$day-$timeSlot').delete();
+      final dayDoc = _getTimetableCollection(semesterId).doc(day.name);
+      final daySnapshot = await dayDoc.get();
+      
+      if (!daySnapshot.exists) {
+        throw Exception('Day schedule not found');
+      }
+      
+      final daySchedule = DaySchedule.fromFirestore(daySnapshot);
+      final updatedSchedule = daySchedule.removeTimeSlot(subjectId, startTime);
+      
+      if (updatedSchedule.timeSlots.isEmpty) {
+        // If no time slots left, delete the day document
+        await dayDoc.delete();
+      } else {
+        // Update the document with remaining time slots
+        await dayDoc.set(updatedSchedule.toJson());
+      }
     } catch (e) {
-      throw Exception('Failed to remove timetable slot: ${handleFirestoreError(e)}');
+      throw Exception('Failed to remove time slot: ${handleFirestoreError(e)}');
     }
   }
 
@@ -167,51 +155,143 @@ class TimetableService extends BaseFirestoreService {
     
     try {
       final snapshot = await _getTimetableCollection(semesterId).get();
+      final allSlots = <Map<String, dynamic>>[];
       
-      return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return {
-          'id': doc.id,
-          'day': data['day'],
-          'timeSlot': data['timeSlot'],
-          'subjectId': data['subjectId'],
-          'updatedAt': data['updatedAt'],
-        };
-      }).toList();
+      for (final doc in snapshot.docs) {
+        final daySchedule = DaySchedule.fromFirestore(doc);
+        for (final slot in daySchedule.timeSlots) {
+          allSlots.add({
+            'day': daySchedule.day.name,
+            'dayDisplayName': daySchedule.day.displayName,
+            'subjectId': slot.subjectId,
+            'startTime': slot.startTime,
+            'endTime': slot.endTime,
+            'room': slot.room,
+            'updatedAt': daySchedule.updatedAt,
+          });
+        }
+      }
+      
+      return allSlots;
     } catch (e) {
       throw Exception('Failed to get all time slots: ${handleFirestoreError(e)}');
     }
   }
 
   /// Check if a time slot conflicts with existing slots
-  Future<bool> hasTimeConflict(String semesterId, String day, String timeSlot, {String? excludeSlotId}) async {
+  Future<bool> hasTimeConflict(String semesterId, WeekDay day, TimeSlot newSlot) async {
     ensureAuthenticated();
     
     try {
-      final snapshot = await _getTimetableCollection(semesterId)
-          .where('day', isEqualTo: day)
-          .where('timeSlot', isEqualTo: timeSlot)
-          .get();
+      final daySchedule = await getDaySchedule(semesterId, day);
       
-      if (excludeSlotId != null) {
-        return snapshot.docs.any((doc) => doc.id != excludeSlotId);
+      if (daySchedule == null) {
+        return false; // No schedule for this day, so no conflicts
       }
       
-      return snapshot.docs.isNotEmpty;
+      return daySchedule.hasTimeConflict(newSlot);
     } catch (e) {
       return false;
     }
   }
 
-  /// Get timetable slot count for a semester
+  /// Get total number of time slots across all days for a semester
   Future<int> getTimetableSlotCount(String semesterId) async {
     ensureAuthenticated();
     
     try {
-      final snapshot = await _getTimetableCollection(semesterId).get();
-      return snapshot.docs.length;
+      final allSlots = await getAllTimeSlots(semesterId);
+      return allSlots.length;
     } catch (e) {
       throw Exception('Failed to get timetable slot count: ${handleFirestoreError(e)}');
+    }
+  }
+
+  /// Update multiple time slots for a day (batch operation)
+  Future<void> updateDaySchedule(String semesterId, WeekDay day, List<TimeSlot> timeSlots) async {
+    ensureAuthenticated();
+    
+    try {
+      // Check if semester exists
+      final semesterDoc = await _semestersCollection.doc(semesterId).get();
+      if (!semesterDoc.exists) {
+        throw Exception('Semester not found');
+      }
+
+      final dayDoc = _getTimetableCollection(semesterId).doc(day.name);
+      
+      if (timeSlots.isEmpty) {
+        // If no time slots provided, delete the day document
+        await dayDoc.delete();
+      } else {
+        // Sort time slots by start time
+        timeSlots.sort((a, b) {
+          final aMinutes = TimeSlot.timeToMinutes(a.startTime);
+          final bMinutes = TimeSlot.timeToMinutes(b.startTime);
+          return aMinutes.compareTo(bMinutes);
+        });
+
+        // Create or update day schedule
+        final now = DateTime.now();
+        final daySchedule = DaySchedule(
+          day: day,
+          timeSlots: timeSlots,
+          createdAt: now,
+          updatedAt: now,
+        );
+        
+        await dayDoc.set(daySchedule.toJson());
+      }
+    } catch (e) {
+      throw Exception('Failed to update day schedule: ${handleFirestoreError(e)}');
+    }
+  }
+
+  /// Stream a specific day's schedule
+  Stream<DaySchedule?> streamDaySchedule(String semesterId, WeekDay day) {
+    return _getTimetableCollection(semesterId)
+        .doc(day.name)
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists) {
+        return null;
+      }
+      return DaySchedule.fromFirestore(doc);
+    });
+  }
+
+  /// Get subjects scheduled for a specific day
+  Future<List<String>> getSubjectsForDay(String semesterId, WeekDay day) async {
+    ensureAuthenticated();
+    
+    try {
+      final daySchedule = await getDaySchedule(semesterId, day);
+      
+      if (daySchedule == null) {
+        return [];
+      }
+      
+      return daySchedule.timeSlots.map((slot) => slot.subjectId).toSet().toList();
+    } catch (e) {
+      throw Exception('Failed to get subjects for day: ${handleFirestoreError(e)}');
+    }
+  }
+
+  /// Clear entire timetable for a semester
+  Future<void> clearTimetable(String semesterId) async {
+    ensureAuthenticated();
+    
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      final snapshot = await _getTimetableCollection(semesterId).get();
+      
+      for (final doc in snapshot.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Failed to clear timetable: ${handleFirestoreError(e)}');
     }
   }
 }

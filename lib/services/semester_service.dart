@@ -218,7 +218,8 @@ class SemesterService extends BaseFirestoreService {
       final totalDays = semester.durationInDays;
       final workingDays = semester.totalWorkingDays;
       final holidays = semester.holidayList.length;
-      final subjects = semester.subjectList.length;
+      final subjectsSnapshot = await _semestersCollection.doc(semesterId).collection('subjects').count().get();
+      final subjects = subjectsSnapshot.count ?? 0;
       
       // Calculate progress
       final daysPassed = now.isAfter(semester.semEndDate) 
