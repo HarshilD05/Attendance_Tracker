@@ -25,6 +25,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
   List<Subject> _subjects = [];
   WeekDay _selectedDay = WeekDay.monday;
   bool _isLoading = true;
+  Map<WeekDay, String> _latestEndTimePerDay = {}; // Track latest end time for each day separately
 
   @override
   void initState() {
@@ -52,6 +53,9 @@ class _TimetableScreenState extends State<TimetableScreen> {
         ).toList();
         
         _isLoading = false;
+        
+        // Update latest end time for all days after loading timetable
+        _updateLatestEndTimeForAllDays();
       });
     } catch (e) {
       setState(() => _isLoading = false);
@@ -61,6 +65,57 @@ class _TimetableScreenState extends State<TimetableScreen> {
         );
       }
     }
+  }
+
+  void _updateLatestEndTimeForAllDays() {
+    if (_timetable == null) return;
+    
+    // Calculate latest end time for each day separately
+    for (WeekDay day in WeekDay.values) {
+      _updateLatestEndTimeForDay(day);
+    }
+  }
+
+  void _updateLatestEndTimeForDay(WeekDay day) {
+    if (_timetable == null) return;
+    
+    String latestTime = '08:00';
+    final daySlots = _timetable!.schedule[day] ?? [];
+    
+    for (TimeSlot slot in daySlots) {
+      if (_compareTime(slot.endTime, latestTime) > 0) {
+        latestTime = slot.endTime;
+      }
+    }
+    
+    _latestEndTimePerDay[day] = latestTime;
+  }
+
+  String _getLatestEndTimeForCurrentDay() {
+    return _latestEndTimePerDay[_selectedDay] ?? '08:00';
+  }
+
+  String _getDefaultEndTime(String startTime) {
+    final startParts = startTime.split(':');
+    final startHour = int.parse(startParts[0]);
+    final startMinute = int.parse(startParts[1]);
+    final endHour = startHour + 1;
+    return '${endHour.toString().padLeft(2, '0')}:${startMinute.toString().padLeft(2, '0')}';
+  }
+
+  int _compareTime(String time1, String time2) {
+    final parts1 = time1.split(':');
+    final parts2 = time2.split(':');
+    
+    final hours1 = int.parse(parts1[0]);
+    final minutes1 = int.parse(parts1[1]);
+    final hours2 = int.parse(parts2[0]);
+    final minutes2 = int.parse(parts2[1]);
+    
+    final totalMinutes1 = hours1 * 60 + minutes1;
+    final totalMinutes2 = hours2 * 60 + minutes2;
+    
+    return totalMinutes1.compareTo(totalMinutes2);
   }
 
   void _showAddSlotDialog() {
@@ -110,8 +165,12 @@ class _TimetableScreenState extends State<TimetableScreen> {
       selectedSubjectId = _subjects.first.id;
     }
 
-    final startTimeController = TextEditingController(text: slot?.startTime ?? '09:00');
-    final endTimeController = TextEditingController(text: slot?.endTime ?? '10:00');
+    // Smart defaults for new slots (day-specific)
+    String defaultStartTime = slot?.startTime ?? _getLatestEndTimeForCurrentDay();
+    String defaultEndTime = slot?.endTime ?? _getDefaultEndTime(defaultStartTime);
+    
+    final startTimeController = TextEditingController(text: defaultStartTime);
+    final endTimeController = TextEditingController(text: defaultEndTime);
     final roomController = TextEditingController(text: slot?.room ?? '');
 
     showDialog(
@@ -155,8 +214,7 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   controller: startTimeController,
                   decoration: const InputDecoration(
                     labelText: 'Start Time (HH:mm)',
-                    border: OutlineInputBorder(),
-                    hintText: '09:00',
+                    border: OutlineInputBorder()                    
                   ),
                   onTap: () => _selectStartTime(context, startTimeController, endTimeController, setDialogState),
                   readOnly: true,
@@ -170,9 +228,8 @@ class _TimetableScreenState extends State<TimetableScreen> {
                   decoration: const InputDecoration(
                     labelText: 'End Time (HH:mm)',
                     border: OutlineInputBorder(),
-                    hintText: '10:00',
                   ),
-                  onTap: () => _selectTime(context, endTimeController),
+                  onTap: () => _selectEndTime(context, endTimeController, startTimeController.text),
                   readOnly: true,
                 ),
                 
@@ -219,29 +276,23 @@ class _TimetableScreenState extends State<TimetableScreen> {
     );
   }
 
-  Future<void> _selectTime(BuildContext context, TextEditingController controller) async {
-    final currentTime = TimeOfDay.now();
-    final selectedTime = await showTimePicker(
-      context: context,
-      initialTime: currentTime,
-    );
-    
-    if (selectedTime != null) {
-      final formattedTime = '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
-      controller.text = formattedTime;
-    }
-  }
-
   Future<void> _selectStartTime(
     BuildContext context, 
     TextEditingController startController, 
     TextEditingController endController,
     void Function(VoidCallback) setDialogState,
   ) async {
-    final currentTime = TimeOfDay(hour: 9, minute: 0); // Default to 9 AM
+    // Use latest end time for current day as default, or 8 AM if no slots exist
+    final latestEndTime = _getLatestEndTimeForCurrentDay();
+    final timeParts = latestEndTime.split(':');
+    final defaultTime = TimeOfDay(
+      hour: int.parse(timeParts[0]),
+      minute: int.parse(timeParts[1]),
+    );
+    
     final selectedTime = await showTimePicker(
       context: context,
-      initialTime: currentTime,
+      initialTime: defaultTime,
     );
     
     if (selectedTime != null) {
@@ -255,6 +306,32 @@ class _TimetableScreenState extends State<TimetableScreen> {
         startController.text = formattedStartTime;
         endController.text = formattedEndTime;
       });
+    }
+  }
+
+  Future<void> _selectEndTime(BuildContext context, TextEditingController controller, String? startTime) async {
+    TimeOfDay defaultTime;
+    
+    if (startTime != null && startTime.isNotEmpty) {
+      // If start time is provided, default to 1 hour after start time
+      final startParts = startTime.split(':');
+      final startHour = int.parse(startParts[0]);
+      final startMinute = int.parse(startParts[1]);
+      final endHour = startHour + 1;
+      defaultTime = TimeOfDay(hour: endHour, minute: startMinute);
+    } else {
+      // Fallback to current time if no start time provided
+      defaultTime = TimeOfDay.now();
+    }
+    
+    final selectedTime = await showTimePicker(
+      context: context,
+      initialTime: defaultTime,
+    );
+    
+    if (selectedTime != null) {
+      final formattedTime = '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}';
+      controller.text = formattedTime;
     }
   }
 
@@ -446,7 +523,11 @@ class _TimetableScreenState extends State<TimetableScreen> {
                           }).toList(),
                           onChanged: (day) {
                             if (day != null) {
-                              setState(() => _selectedDay = day);
+                              setState(() {
+                                _selectedDay = day;
+                                // Update latest end time for the newly selected day
+                                _updateLatestEndTimeForDay(day);
+                              });
                             }
                           },
                         ),
