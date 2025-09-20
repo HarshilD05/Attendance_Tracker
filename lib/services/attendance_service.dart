@@ -1,253 +1,383 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/attendance.dart';
+import '../models/timetable.dart';
 import 'base_firestore_service.dart';
+import 'timetable_service.dart';
+import 'semester_service.dart';
 
 class AttendanceService extends BaseFirestoreService {
-  static const String _semestersCollectionName = 'semesters';
+  static const String _collectionName = 'attendance';
+  static const String _analysisDocName = 'attendance_analysis';
+  
+  final TimetableService _timetableService = TimetableService();
+  final SemesterService _semesterService = SemesterService();
 
-  /// Get semesters collection reference
-  CollectionReference get _semestersCollection => getCollection(_semestersCollectionName);
+  CollectionReference get _attendanceCollection =>
+      FirebaseFirestore.instance.collection('semesters');
 
-  /// Get attendance subcollection reference
-  CollectionReference _getAttendanceCollection(String semesterId) {
-    return _semestersCollection.doc(semesterId).collection('attendance');
-  }
-
-  /// Add attendance record
-  Future<String> addAttendanceRecord(String semesterId, Attendance attendance) async {
+  /// Get or create daily attendance for a specific date
+  Future<DailyAttendance> getDailyAttendance(String semesterId, String date) async {
     ensureAuthenticated();
     
     try {
-      // Check if semester exists
-      final semesterDoc = await _semestersCollection.doc(semesterId).get();
-      if (!semesterDoc.exists) {
-        throw Exception('Semester not found');
+      final doc = await _attendanceCollection
+          .doc(semesterId)
+          .collection(_collectionName)
+          .doc(date)
+          .get();
+
+      if (doc.exists) {
+        return DailyAttendance.fromJson(
+          doc.data() as Map<String, dynamic>,
+          date,
+          semesterId,
+        );
+      } else {
+        // Create new daily attendance from timetable
+        return await _createDailyAttendanceFromTimetable(semesterId, date);
       }
-
-      final docRef = await _getAttendanceCollection(semesterId).add(attendance.toJson());
-      return docRef.id;
     } catch (e) {
-      throw Exception('Failed to add attendance record: ${handleFirestoreError(e)}');
+      throw Exception('Failed to get daily attendance: ${handleFirestoreError(e)}');
     }
   }
 
-  /// Get attendance records for a subject
-  Future<List<Attendance>> getSubjectAttendance(String semesterId, String subjectId) async {
+  /// Create daily attendance from timetable for a specific date
+  Future<DailyAttendance> _createDailyAttendanceFromTimetable(
+    String semesterId, 
+    String date,
+  ) async {
+    final dateTime = DateTime.parse(date);
+    final weekDay = WeekDay.values[dateTime.weekday - 1];
+    
+    // Get timetable for the day
+    final timetable = await _timetableService.getTimeTable(semesterId);
+    final daySlots = timetable.schedule[weekDay] ?? [];
+    
+    // Create subject attendance entries
+    final subjectAttendances = <String, SubjectAttendance>{};
+    for (final slot in daySlots) {
+      subjectAttendances[slot.subjectId] = SubjectAttendance(
+        subjectId: slot.subjectId,
+        status: AttendanceStatus.unmarked,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        roomNo: slot.room,
+      );
+    }
+    
+    final dailyAttendance = DailyAttendance(
+      date: date,
+      semesterId: semesterId,
+      subjects: subjectAttendances,
+      totalCredits: daySlots.length,
+      creditsEarned: 0,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    
+    // Save to Firestore
+    await _attendanceCollection
+        .doc(semesterId)
+        .collection(_collectionName)
+        .doc(date)
+        .set(dailyAttendance.toJson());
+    
+    return dailyAttendance;
+  }
+
+  /// Mark attendance for a specific subject on a specific date
+  Future<void> markAttendance(
+    String semesterId,
+    String date,
+    String subjectId,
+    AttendanceStatus status,
+  ) async {
     ensureAuthenticated();
     
     try {
-      final snapshot = await _getAttendanceCollection(semesterId)
-          .where('subjectId', isEqualTo: subjectId)
-          .orderBy('date', descending: false)
-          .get();
+      final dailyAttendance = await getDailyAttendance(semesterId, date);
       
-      return snapshot.docs
-          .map((doc) => Attendance.fromFirestore(doc))
-          .toList();
-    } catch (e) {
-      throw Exception('Failed to get subject attendance: ${handleFirestoreError(e)}');
-    }
-  }
-
-  /// Get all attendance records for a semester
-  Future<List<Attendance>> getSemesterAttendance(String semesterId) async {
-    ensureAuthenticated();
-    
-    try {
-      final snapshot = await _getAttendanceCollection(semesterId)
-          .orderBy('date', descending: false)
-          .get();
+      if (!dailyAttendance.subjects.containsKey(subjectId)) {
+        throw Exception('Subject not found in daily attendance');
+      }
       
-      return snapshot.docs
-          .map((doc) => Attendance.fromFirestore(doc))
-          .toList();
-    } catch (e) {
-      throw Exception('Failed to get semester attendance: ${handleFirestoreError(e)}');
-    }
-  }
-
-  /// Stream attendance records for a subject
-  Stream<List<Attendance>> streamSubjectAttendance(String semesterId, String subjectId) {
-    return _getAttendanceCollection(semesterId)
-        .where('subjectId', isEqualTo: subjectId)
-        .orderBy('date', descending: false)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Attendance.fromFirestore(doc))
-            .toList());
-  }
-
-  /// Stream all attendance records for a semester
-  Stream<List<Attendance>> streamSemesterAttendance(String semesterId) {
-    return _getAttendanceCollection(semesterId)
-        .orderBy('date', descending: false)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Attendance.fromFirestore(doc))
-            .toList());
-  }
-
-  /// Update attendance record
-  Future<void> updateAttendanceRecord(String semesterId, Attendance updatedAttendance) async {
-    ensureAuthenticated();
-    
-    try {
-      await _getAttendanceCollection(semesterId)
-          .doc(updatedAttendance.id)
-          .update(updatedAttendance.toJson());
-    } catch (e) {
-      throw Exception('Failed to update attendance record: ${handleFirestoreError(e)}');
-    }
-  }
-
-  /// Delete attendance record
-  Future<void> deleteAttendanceRecord(String semesterId, String attendanceId) async {
-    ensureAuthenticated();
-    
-    try {
-      await _getAttendanceCollection(semesterId).doc(attendanceId).delete();
-    } catch (e) {
-      throw Exception('Failed to delete attendance record: ${handleFirestoreError(e)}');
-    }
-  }
-
-  /// Get attendance for a specific date
-  Future<List<Attendance>> getDateAttendance(String semesterId, DateTime date) async {
-    ensureAuthenticated();
-    
-    try {
-      // Create date range for the entire day
-      final startOfDay = DateTime(date.year, date.month, date.day);
-      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+      final currentSubject = dailyAttendance.subjects[subjectId]!;
+      final updatedSubject = currentSubject.copyWith(status: status);
       
-      final snapshot = await _getAttendanceCollection(semesterId)
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-          .get();
+      // Calculate new credits earned
+      final updatedSubjects = Map<String, SubjectAttendance>.from(dailyAttendance.subjects);
+      updatedSubjects[subjectId] = updatedSubject;
       
-      return snapshot.docs
-          .map((doc) => Attendance.fromFirestore(doc))
-          .toList();
+      final creditsEarned = updatedSubjects.values
+          .where((s) => s.status == AttendanceStatus.present)
+          .length;
+      
+      final updatedDailyAttendance = dailyAttendance.copyWith(
+        subjects: updatedSubjects,
+        creditsEarned: creditsEarned,
+        updatedAt: DateTime.now(),
+      );
+      
+      // Update in Firestore using batch
+      final batch = FirebaseFirestore.instance.batch();
+      
+      // Update daily attendance
+      batch.set(
+        _attendanceCollection
+            .doc(semesterId)
+            .collection(_collectionName)
+            .doc(date),
+        updatedDailyAttendance.toJson(),
+      );
+      
+      await batch.commit();
+      
+      // Update analysis asynchronously
+      _updateAnalysisAfterAttendanceChange(semesterId);
+      
     } catch (e) {
-      throw Exception('Failed to get date attendance: ${handleFirestoreError(e)}');
+      throw Exception('Failed to mark attendance: ${handleFirestoreError(e)}');
     }
   }
 
   /// Get attendance for a date range
-  Future<List<Attendance>> getDateRangeAttendance(String semesterId, DateTime startDate, DateTime endDate) async {
+  Future<List<DailyAttendance>> getAttendanceRange(
+    String semesterId,
+    String startDate,
+    String endDate,
+  ) async {
     ensureAuthenticated();
     
     try {
-      final snapshot = await _getAttendanceCollection(semesterId)
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
-          .orderBy('date', descending: false)
+      final query = await _attendanceCollection
+          .doc(semesterId)
+          .collection(_collectionName)
+          .where(FieldPath.documentId, isGreaterThanOrEqualTo: startDate)
+          .where(FieldPath.documentId, isLessThanOrEqualTo: endDate)
+          .orderBy(FieldPath.documentId)
           .get();
       
-      return snapshot.docs
-          .map((doc) => Attendance.fromFirestore(doc))
-          .toList();
+      return query.docs.map((doc) => DailyAttendance.fromJson(
+        doc.data(),
+        doc.id,
+        semesterId,
+      )).toList();
     } catch (e) {
-      throw Exception('Failed to get date range attendance: ${handleFirestoreError(e)}');
+      throw Exception('Failed to get attendance range: ${handleFirestoreError(e)}');
     }
   }
 
-  /// Calculate attendance percentage for a subject
-  Future<double> calculateSubjectAttendancePercentage(String semesterId, String subjectId) async {
+  /// Check if a date is a holiday
+  Future<bool> isHoliday(String semesterId, String date) async {
     try {
-      final attendanceRecords = await getSubjectAttendance(semesterId, subjectId);
+      final semester = await _semesterService.getSemester(semesterId);
+      if (semester == null) return false;
       
-      if (attendanceRecords.isEmpty) {
-        return 0.0;
-      }
-      
-      final presentCount = attendanceRecords.where((record) => record.present).length;
-      return (presentCount / attendanceRecords.length) * 100;
-    } catch (e) {
-      throw Exception('Failed to calculate attendance percentage: ${handleFirestoreError(e)}');
-    }
-  }
-
-  /// Calculate overall attendance percentage for semester
-  Future<double> calculateSemesterAttendancePercentage(String semesterId) async {
-    try {
-      final attendanceRecords = await getSemesterAttendance(semesterId);
-      
-      if (attendanceRecords.isEmpty) {
-        return 0.0;
-      }
-      
-      final presentCount = attendanceRecords.where((record) => record.present).length;
-      return (presentCount / attendanceRecords.length) * 100;
-    } catch (e) {
-      throw Exception('Failed to calculate semester attendance percentage: ${handleFirestoreError(e)}');
-    }
-  }
-
-  /// Get attendance statistics for a subject
-  Future<Map<String, dynamic>> getSubjectAttendanceStats(String semesterId, String subjectId) async {
-    try {
-      final attendanceRecords = await getSubjectAttendance(semesterId, subjectId);
-      
-      final totalClasses = attendanceRecords.length;
-      final presentCount = attendanceRecords.where((record) => record.present).length;
-      final absentCount = totalClasses - presentCount;
-      final attendancePercentage = totalClasses > 0 ? (presentCount / totalClasses) * 100 : 0.0;
-      
-      // Calculate classes needed for 75% attendance
-      final classesNeededFor75 = totalClasses > 0 
-          ? ((0.75 * (totalClasses + 1)) - presentCount).ceil().clamp(0, double.infinity).toInt()
-          : 0;
-      
-      return {
-        'totalClasses': totalClasses,
-        'presentCount': presentCount,
-        'absentCount': absentCount,
-        'attendancePercentage': attendancePercentage.roundToDouble(),
-        'classesNeededFor75': classesNeededFor75,
-      };
-    } catch (e) {
-      throw Exception('Failed to get subject attendance stats: ${handleFirestoreError(e)}');
-    }
-  }
-
-  /// Get attendance count for a specific date
-  Future<int> getAttendanceCountForDate(String semesterId, DateTime date) async {
-    ensureAuthenticated();
-    
-    try {
-      final startOfDay = DateTime(date.year, date.month, date.day);
-      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
-      
-      final snapshot = await _getAttendanceCollection(semesterId)
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-          .get();
-      
-      return snapshot.docs.length;
-    } catch (e) {
-      throw Exception('Failed to get attendance count for date: ${handleFirestoreError(e)}');
-    }
-  }
-
-  /// Check if attendance exists for subject on specific date
-  Future<bool> attendanceExistsForDate(String semesterId, String subjectId, DateTime date) async {
-    ensureAuthenticated();
-    
-    try {
-      final startOfDay = DateTime(date.year, date.month, date.day);
-      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
-      
-      final snapshot = await _getAttendanceCollection(semesterId)
-          .where('subjectId', isEqualTo: subjectId)
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
-          .limit(1)
-          .get();
-      
-      return snapshot.docs.isNotEmpty;
+      final dateTime = DateTime.parse(date);
+      return semester.holidayList.any((holiday) =>
+          holiday.year == dateTime.year &&
+          holiday.month == dateTime.month &&
+          holiday.day == dateTime.day);
     } catch (e) {
       return false;
     }
+  }
+
+  /// Get today's subjects with attendance status
+  Future<List<SubjectAttendance>> getTodaysSubjects(String semesterId) async {
+    final today = DateTime.now();
+    final dateString = '${today.year.toString().padLeft(4, '0')}-'
+        '${today.month.toString().padLeft(2, '0')}-'
+        '${today.day.toString().padLeft(2, '0')}';
+    
+    // Check if today is a holiday
+    if (await isHoliday(semesterId, dateString)) {
+      return []; // Return empty list for holidays
+    }
+    
+    final dailyAttendance = await getDailyAttendance(semesterId, dateString);
+    return dailyAttendance.subjects.values.toList();
+  }
+
+  /// Get subjects filtered by attendance status
+  Future<List<SubjectAttendance>> getFilteredSubjects(
+    String semesterId,
+    String date,
+    AttendanceStatus? filter,
+  ) async {
+    final dailyAttendance = await getDailyAttendance(semesterId, date);
+    final subjects = dailyAttendance.subjects.values.toList();
+    
+    if (filter == null) {
+      return subjects; // Return all subjects
+    }
+    
+    return subjects.where((subject) => subject.status == filter).toList();
+  }
+
+  /// Update attendance analysis (run asynchronously)
+  Future<void> _updateAnalysisAfterAttendanceChange(String semesterId) async {
+    try {
+      // Get all attendance records for the semester
+      final attendanceRecords = await _attendanceCollection
+          .doc(semesterId)
+          .collection(_collectionName)
+          .get();
+      
+      // Calculate subject-wise analysis
+      final subjectAnalysis = <String, SubjectAnalysis>{};
+      final monthlyData = <String, Map<String, int>>{}; // month -> {present: x, absent: y}
+      
+      int totalPresent = 0;
+      int totalAbsent = 0;
+      
+      for (final doc in attendanceRecords.docs) {
+        final dailyAttendance = DailyAttendance.fromJson(
+          doc.data(),
+          doc.id,
+          semesterId,
+        );
+        
+        final month = doc.id.substring(0, 7); // YYYY-MM
+        monthlyData[month] ??= {'present': 0, 'absent': 0};
+        
+        for (final subjectAttendance in dailyAttendance.subjects.values) {
+          final subjectId = subjectAttendance.subjectId;
+          
+          // Initialize subject analysis if not exists
+          subjectAnalysis[subjectId] ??= SubjectAnalysis(
+            subjectId: subjectId,
+            allTimePercentage: 0.0,
+            monthlyPercentage: {},
+            totalLectures: 0,
+            attendedLectures: 0,
+            missableLectures: 0,
+          );
+          
+          // Update counts based on status
+          if (subjectAttendance.status == AttendanceStatus.present) {
+            totalPresent++;
+            monthlyData[month]!['present'] = monthlyData[month]!['present']! + 1;
+          } else if (subjectAttendance.status == AttendanceStatus.absent) {
+            totalAbsent++;
+            monthlyData[month]!['absent'] = monthlyData[month]!['absent']! + 1;
+          }
+        }
+      }
+      
+      // Calculate percentages and create analysis
+      final monthlyAggregate = <String, MonthlyAggregate>{};
+      for (final entry in monthlyData.entries) {
+        final present = entry.value['present']!;
+        final absent = entry.value['absent']!;
+        final total = present + absent;
+        final percentage = total > 0 ? (present / total * 100) : 0.0;
+        
+        monthlyAggregate[entry.key] = MonthlyAggregate(
+          presentCount: present,
+          absentCount: absent,
+          percentage: percentage,
+        );
+      }
+      
+      final overallTotal = totalPresent + totalAbsent;
+      final overallPercentage = overallTotal > 0 ? (totalPresent / overallTotal * 100) : 0.0;
+      
+      final analysis = AttendanceAnalysis(
+        semesterId: semesterId,
+        subjectWise: subjectAnalysis,
+        monthlyAggregate: monthlyAggregate,
+        overallAggregate: OverallAggregate(
+          totalPresent: totalPresent,
+          totalAbsent: totalAbsent,
+          overallPercentage: overallPercentage,
+        ),
+        lastUpdated: DateTime.now(),
+      );
+      
+      // Save analysis to Firestore
+      await _attendanceCollection
+          .doc(semesterId)
+          .collection('analysis')
+          .doc(_analysisDocName)
+          .set(analysis.toJson());
+      
+    } catch (e) {
+      // Log error but don't throw to avoid blocking attendance marking
+      print('Error updating attendance analysis: $e');
+    }
+  }
+
+  /// Get attendance analysis
+  Future<AttendanceAnalysis> getAttendanceAnalysis(String semesterId) async {
+    ensureAuthenticated();
+    
+    try {
+      final doc = await _attendanceCollection
+          .doc(semesterId)
+          .collection('analysis')
+          .doc(_analysisDocName)
+          .get();
+      
+      if (doc.exists) {
+        return AttendanceAnalysis.fromJson(
+          doc.data() as Map<String, dynamic>,
+          semesterId,
+        );
+      } else {
+        // Return empty analysis if not exists
+        return AttendanceAnalysis.empty(semesterId);
+      }
+    } catch (e) {
+      throw Exception('Failed to get attendance analysis: ${handleFirestoreError(e)}');
+    }
+  }
+
+  /// Delete all attendance data for a semester
+  Future<void> deleteAttendanceData(String semesterId) async {
+    ensureAuthenticated();
+    
+    try {
+      // Delete all daily attendance documents
+      final attendanceDocs = await _attendanceCollection
+          .doc(semesterId)
+          .collection(_collectionName)
+          .get();
+      
+      final batch = FirebaseFirestore.instance.batch();
+      
+      for (final doc in attendanceDocs.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      // Delete analysis document
+      batch.delete(
+        _attendanceCollection
+            .doc(semesterId)
+            .collection('analysis')
+            .doc(_analysisDocName),
+      );
+      
+      await batch.commit();
+    } catch (e) {
+      throw Exception('Failed to delete attendance data: ${handleFirestoreError(e)}');
+    }
+  }
+
+  /// Get attendance summary for a specific date
+  Future<Map<String, dynamic>> getAttendanceSummary(
+    String semesterId,
+    String date,
+  ) async {
+    final dailyAttendance = await getDailyAttendance(semesterId, date);
+    
+    return {
+      'totalSubjects': dailyAttendance.totalCredits,
+      'presentCount': dailyAttendance.presentCount,
+      'absentCount': dailyAttendance.absentCount,
+      'unmarkedCount': dailyAttendance.unmarkedCount,
+      'attendancePercentage': dailyAttendance.attendancePercentage,
+      'isFullyMarked': dailyAttendance.isFullyMarked,
+    };
   }
 }

@@ -3,6 +3,8 @@ import '../theme/theme_manager.dart';
 import '../screens/semester_screen.dart';
 import '../screens/add_semester_screen.dart';
 import '../screens/semester_detail_screen.dart';
+import '../screens/subjects_screen.dart';
+import '../screens/timetable_screen.dart';
 import 'auth_wrapper.dart';
 
 class BunkMateApp extends StatefulWidget {
@@ -50,6 +52,16 @@ class _BunkMateAppState extends State<BunkMateApp> {
             final semesterId = settings.arguments as String;
             return MaterialPageRoute(
               builder: (context) => SemesterDetailScreen(semesterId: semesterId),
+            );
+          case '/subjects':
+            final semesterId = settings.arguments as String;
+            return MaterialPageRoute(
+              builder: (context) => SubjectsScreen(semesterId: semesterId),
+            );
+          case '/timetable':
+            final semesterId = settings.arguments as String;
+            return MaterialPageRoute(
+              builder: (context) => TimetableScreen(semesterId: semesterId),
             );
           default:
             return null;
