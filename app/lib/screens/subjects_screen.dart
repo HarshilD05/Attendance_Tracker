@@ -39,7 +39,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: Theme.of(context).extension<AppColorScheme>()!.surface,
       builder: (context) {
         return Padding(
           padding: EdgeInsets.only(
@@ -110,7 +110,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppTheme.surface,
+          backgroundColor: Theme.of(context).extension<AppColorScheme>()!.surface,
           title: Text(subject.name),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -171,9 +171,9 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(sub.name, style: Theme.of(context).textTheme.titleLarge),
-                      if (sub.teacher != null)
-                        Text('Teacher: ${sub.teacher}', style: const TextStyle(color: Colors.white60)),
-                      Text('Min: ${sub.minAttendanceReq.toStringAsFixed(0)}%', style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                      if (sub.teacher != null && sub.teacher!.isNotEmpty)
+                        Text('Teacher: ${sub.teacher}', style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary)),
+                      Text('Min: ${sub.minAttendanceReq.toStringAsFixed(0)}%', style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textMuted, fontSize: 12)),
                     ],
                   ),
                 );

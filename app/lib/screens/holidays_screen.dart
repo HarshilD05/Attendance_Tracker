@@ -51,13 +51,13 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
         if (existingHoliday != null) {
           // It's a Holiday -> Show Remove button
           return AlertDialog(
-            backgroundColor: AppTheme.surface,
+            backgroundColor: Theme.of(context).extension<AppColorScheme>()!.surface,
             title: Text(displayStr),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Status: HOLIDAY', style: TextStyle(color: AppTheme.absentColor, fontWeight: FontWeight.bold)),
+                Text('Status: HOLIDAY', style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.absent, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 Text('Name: ${existingHoliday.name}'),
               ],
@@ -84,7 +84,7 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
           // Regular Day -> Show Add button
           final nameCtrl = TextEditingController();
           return AlertDialog(
-            backgroundColor: AppTheme.surface,
+            backgroundColor: Theme.of(context).extension<AppColorScheme>()!.surface,
             title: Text(displayStr),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -145,9 +145,9 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
             focusedDay: _focusedDay,
             calendarFormat: CalendarFormat.month,
             headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
-            calendarStyle: const CalendarStyle(
-              todayDecoration: BoxDecoration(color: AppTheme.primaryAccent, shape: BoxShape.circle),
-              markerDecoration: BoxDecoration(color: AppTheme.absentColor, shape: BoxShape.circle),
+            calendarStyle: CalendarStyle(
+              todayDecoration: BoxDecoration(color: Theme.of(context).extension<AppColorScheme>()!.primary, shape: BoxShape.circle),
+              markerDecoration: BoxDecoration(color: Theme.of(context).extension<AppColorScheme>()!.absent, shape: BoxShape.circle),
             ),
             eventLoader: (day) {
               final dateStr = format.format(day);

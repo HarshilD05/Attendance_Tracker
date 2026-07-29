@@ -80,7 +80,7 @@ class _EmptyView extends StatelessWidget {
   const _EmptyView(this.message);
   @override
   Widget build(BuildContext context) => Center(
-        child: Text(message, style: const TextStyle(color: Colors.white54)),
+        child: Text(message, style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary)),
       );
 }
 
@@ -116,7 +116,7 @@ class _OverallTab extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 letterSpacing: 1.2,
-                color: Colors.white38,
+                color: Theme.of(context).extension<AppColorScheme>()!.textMuted,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -173,7 +173,7 @@ class _SubjectTabState extends State<_SubjectTab> {
             decoration: InputDecoration(
               labelText: 'Select Subject',
               filled: true,
-              fillColor: AppTheme.surface,
+              fillColor: Theme.of(context).extension<AppColorScheme>()!.surface,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             items: subjects
@@ -207,7 +207,7 @@ class _SubjectTabState extends State<_SubjectTab> {
                       style: TextStyle(
                         fontSize: 11,
                         letterSpacing: 1.2,
-                        color: Colors.white38,
+                        color: Theme.of(context).extension<AppColorScheme>()!.textMuted,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -244,7 +244,7 @@ class _MonthlyBarChart extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: Theme.of(context).extension<AppColorScheme>()!.surface,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -256,11 +256,12 @@ class _MonthlyBarChart extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: data.map((d) {
                 final barHeight = (d.percentage / 100) * barMaxHeight;
+                final colors = Theme.of(context).extension<AppColorScheme>()!;
                 final color = d.percentage >= minReq + 5
-                    ? AppTheme.presentColor
+                    ? colors.attendanceSafe
                     : d.percentage >= minReq - 5
-                        ? const Color(0xFFFFAB40)
-                        : AppTheme.absentColor;
+                        ? colors.attendanceWarning
+                        : colors.attendanceDanger;
                 final barColor = d.isCurrent ? color.withOpacity(0.65) : color;
 
                 return Expanded(
@@ -307,7 +308,7 @@ class _MonthlyBarChart extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 10,
-                      color: d.isCurrent ? Colors.white70 : Colors.white38,
+                      color: d.isCurrent ? Theme.of(context).extension<AppColorScheme>()!.textSecondary : Theme.of(context).extension<AppColorScheme>()!.textMuted,
                       fontWeight: d.isCurrent ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
@@ -369,7 +370,7 @@ class _MonthlyTabState extends State<_MonthlyTab> {
             decoration: InputDecoration(
               labelText: 'Select Month',
               filled: true,
-              fillColor: AppTheme.surface,
+              fillColor: Theme.of(context).extension<AppColorScheme>()!.surface,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
             items: months
@@ -400,7 +401,7 @@ class _MonthlyTabState extends State<_MonthlyTab> {
                     style: TextStyle(
                       fontSize: 11,
                       letterSpacing: 1.2,
-                      color: Colors.white38,
+                      color: Theme.of(context).extension<AppColorScheme>()!.textMuted,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

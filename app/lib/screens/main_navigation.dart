@@ -29,7 +29,7 @@ class _MainNavigationState extends State<MainNavigation> {
         onTap: (index) => setState(() => _currentIndex = index),
         backgroundColor: Theme.of(context).colorScheme.surface,
         selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Colors.white54,
+        unselectedItemColor: Theme.of(context).extension<AppColorScheme>()!.textSecondary,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Semesters'),
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),

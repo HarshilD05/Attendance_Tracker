@@ -9,10 +9,11 @@ class CustomCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<AppColorScheme>()!;
     return GestureDetector(
       onTap: onTap,
       child: Card(
-        color: AppTheme.surface,
+        color: colors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 2,
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),

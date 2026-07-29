@@ -92,7 +92,7 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.surface,
+      backgroundColor: Theme.of(context).extension<AppColorScheme>()!.surface,
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
@@ -215,7 +215,7 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: AppTheme.surface,
+          backgroundColor: Theme.of(context).extension<AppColorScheme>()!.surface,
           title: Text(subjectName),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -307,7 +307,7 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
                       children: [
                         Text(subName, style: Theme.of(context).textTheme.titleLarge),
                         const SizedBox(height: 4),
-                        Text(displayTime, style: const TextStyle(color: Colors.white70)),
+                        Text(displayTime, style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary)),
                       ],
                     ),
                     if (slot.classRoom.isNotEmpty)

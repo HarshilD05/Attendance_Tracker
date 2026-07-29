@@ -30,7 +30,9 @@ class AttendanceTrackerApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Attendance Tracker',
-        theme: AppTheme.darkTheme,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
         home: const MainNavigation(),
       ),

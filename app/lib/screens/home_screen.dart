@@ -116,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: _QuickMarkButton(
                           label: 'All Present',
                           icon: Icons.check_circle_outline,
-                          color: AppTheme.presentColor,
+                          color: Theme.of(context).extension<AppColorScheme>()!.present,
                           onTap: () => _markAll(activeSem.id!, 'P', ac),
                         ),
                       ),
@@ -125,7 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: _QuickMarkButton(
                           label: 'All Absent',
                           icon: Icons.cancel_outlined,
-                          color: AppTheme.absentColor,
+                          color: Theme.of(context).extension<AppColorScheme>()!.absent,
                           onTap: () => _markAll(activeSem.id!, 'A', ac),
                         ),
                       ),
@@ -166,17 +166,22 @@ class _HomeScreenState extends State<HomeScreen> {
                                   Chip(label: Text(slot.classRoom, style: const TextStyle(fontSize: 12))),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(displayTime, style: const TextStyle(color: Colors.white70)),
+                           if (displayTime.isNotEmpty)
+                            Text(displayTime, style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary)),
                             const SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
                                   child: ElevatedButton(
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: isPresent ? Colors.green : AppTheme.surface,
-                                      foregroundColor: isPresent ? Colors.white : Colors.white70,
-                                      side: BorderSide(color: isPresent ? Colors.green : Colors.white24),
+                                      backgroundColor: isPresent
+                                          ? Theme.of(context).extension<AppColorScheme>()!.present
+                                          : Theme.of(context).extension<AppColorScheme>()!.surface,
+                                      foregroundColor: isPresent ? Colors.white : Theme.of(context).extension<AppColorScheme>()!.textSecondary,
+                                      side: BorderSide(
+                                          color: isPresent
+                                              ? Theme.of(context).extension<AppColorScheme>()!.present
+                                              : Theme.of(context).extension<AppColorScheme>()!.textMuted.withOpacity(0.2)),
                                     ),
                                     onPressed: () => _markAttendance(activeSem.id!, slot.subId, slot.slotId, 'P', ac),
                                     child: const Text('Present'),
@@ -186,9 +191,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Expanded(
                                   child: ElevatedButton(
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: isAbsent ? AppTheme.absentColor : AppTheme.surface,
-                                      foregroundColor: isAbsent ? Colors.white : Colors.white70,
-                                      side: BorderSide(color: isAbsent ? AppTheme.absentColor : Colors.white24),
+                                      backgroundColor: isAbsent
+                                          ? Theme.of(context).extension<AppColorScheme>()!.absent
+                                          : Theme.of(context).extension<AppColorScheme>()!.surface,
+                                      foregroundColor: isAbsent ? Colors.white : Theme.of(context).extension<AppColorScheme>()!.textSecondary,
+                                      side: BorderSide(
+                                          color: isAbsent
+                                              ? Theme.of(context).extension<AppColorScheme>()!.absent
+                                              : Theme.of(context).extension<AppColorScheme>()!.textMuted.withOpacity(0.2)),
                                     ),
                                     onPressed: () => _markAttendance(activeSem.id!, slot.subId, slot.slotId, 'A', ac),
                                     child: const Text('Absent'),
