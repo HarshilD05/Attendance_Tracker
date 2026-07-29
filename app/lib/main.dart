@@ -5,10 +5,9 @@ import 'controllers/semester_controller.dart';
 import 'controllers/subject_controller.dart';
 import 'controllers/holiday_controller.dart';
 import 'controllers/attendance_controller.dart';
-
-// We will import screens as we create them
-// import 'screens/home_screen.dart';
-// import 'screens/semesters_screen.dart';
+import 'controllers/timetable_controller.dart';
+import 'controllers/analytics_controller.dart';
+import 'screens/main_navigation.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,21 +25,14 @@ class AttendanceTrackerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => SubjectController()),
         ChangeNotifierProvider(create: (_) => HolidayController()),
         ChangeNotifierProvider(create: (_) => AttendanceController()),
+        ChangeNotifierProvider(create: (_) => TimetableController()),
+        ChangeNotifierProvider(create: (_) => AnalyticsController()),
       ],
       child: MaterialApp(
         title: 'Attendance Tracker',
         theme: AppTheme.darkTheme,
         debugShowCheckedModeBanner: false,
-        home: const Scaffold(
-          body: Center(
-            child: Text('Attendance Tracker initialized with Midnight Scholar theme!'),
-          ),
-        ),
-        // initialRoute: '/',
-        // routes: {
-        //   '/': (context) => const HomeScreen(),
-        //   '/semesters': (context) => const SemestersScreen(),
-        // },
+        home: const MainNavigation(),
       ),
     );
   }

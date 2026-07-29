@@ -18,4 +18,9 @@ class HolidayRepo {
     );
     return List.generate(maps.length, (i) => Holiday.fromMap(maps[i]));
   }
+
+  Future<int> deleteHoliday(int holidayId) async {
+    final db = await dbHelper.database;
+    return await db.delete('Holidays', where: 'id = ?', whereArgs: [holidayId]);
+  }
 }

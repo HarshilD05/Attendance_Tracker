@@ -6,41 +6,39 @@ class SubjectController with ChangeNotifier {
   final SubjectRepo _subjectRepo = SubjectRepo();
 
   List<Subject> _subjects = [];
-  String? _errorMessage;
 
   List<Subject> get subjects => _subjects;
-  String? get errorMessage => _errorMessage;
 
-  Future<void> loadSubjectsForSemester(int semId) async {
+  Future<String?> loadSubjectsForSemester(int semId) async {
     try {
-      _errorMessage = null;
       _subjects = await _subjectRepo.getSubjectsForSemester(semId);
       notifyListeners();
+      return null;
     } catch (e) {
-      _errorMessage = 'Failed to load subjects: $e';
-      notifyListeners();
+  print(e);
+      return 'Failed to load subjects.';
     }
   }
 
-  Future<void> addSubject(Subject subject) async {
+  Future<String?> addSubject(Subject subject) async {
     try {
-      _errorMessage = null;
       await _subjectRepo.insertSubject(subject);
       await loadSubjectsForSemester(subject.semId);
+      return null;
     } catch (e) {
-      _errorMessage = 'Failed to add subject: $e';
-      notifyListeners();
+  print(e);
+      return 'Failed to add subject.';
     }
   }
 
-  Future<void> removeSubject(int subjectId, int semId) async {
+  Future<String?> removeSubject(int subjectId, int semId) async {
     try {
-      _errorMessage = null;
       await _subjectRepo.deleteSubject(subjectId);
       await loadSubjectsForSemester(semId);
+      return null;
     } catch (e) {
-      _errorMessage = 'Failed to delete subject: $e';
-      notifyListeners();
+  print(e);
+      return 'Failed to delete subject.';
     }
   }
 }

@@ -6,30 +6,39 @@ class HolidayController with ChangeNotifier {
   final HolidayRepo _holidayRepo = HolidayRepo();
 
   List<Holiday> _holidays = [];
-  String? _errorMessage;
 
   List<Holiday> get holidays => _holidays;
-  String? get errorMessage => _errorMessage;
 
-  Future<void> loadHolidaysForSemester(int semId) async {
+  Future<String?> loadHolidaysForSemester(int semId) async {
     try {
-      _errorMessage = null;
       _holidays = await _holidayRepo.getHolidaysForSemester(semId);
       notifyListeners();
+      return null;
     } catch (e) {
-      _errorMessage = 'Failed to load holidays: $e';
-      notifyListeners();
+  print(e);
+      return 'Failed to load holidays.';
     }
   }
 
-  Future<void> addHoliday(Holiday holiday) async {
+  Future<String?> addHoliday(Holiday holiday) async {
     try {
-      _errorMessage = null;
       await _holidayRepo.insertHoliday(holiday);
       await loadHolidaysForSemester(holiday.semId);
+      return null;
     } catch (e) {
-      _errorMessage = 'Failed to add holiday: $e';
-      notifyListeners();
+  print(e);
+      return 'Failed to add holiday.';
+    }
+  }
+
+  Future<String?> removeHoliday(int holidayId, int semId) async {
+    try {
+      await _holidayRepo.deleteHoliday(holidayId);
+      await loadHolidaysForSemester(semId);
+      return null;
+    } catch (e) {
+  print(e);
+      return 'Failed to remove holiday.';
     }
   }
 }

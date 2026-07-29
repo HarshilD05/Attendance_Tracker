@@ -2,7 +2,8 @@ CREATE TABLE Semester(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT,
   start_date TEXT,
-  end_date TEXT
+  end_date TEXT,
+  min_attendance_req REAL NOT NULL DEFAULT 75.0
 );
 
 CREATE TABLE Holidays(

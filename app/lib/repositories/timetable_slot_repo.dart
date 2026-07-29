@@ -1,5 +1,5 @@
 import '../config/database.dart';
-import '../models/timetable.dart';
+import '../models/timetable_slot.dart';
 
 class TimetableSlotRepo {
   final dbHelper = DatabaseHelper.instance;

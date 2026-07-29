@@ -11,23 +11,21 @@ class SemesterController with ChangeNotifier {
 
   List<Semester> _semesters = [];
   Semester? _activeSemester;
-  String? _errorMessage;
 
   List<Semester> get semesters => _semesters;
   Semester? get activeSemester => _activeSemester;
-  String? get errorMessage => _errorMessage;
 
-  Future<void> loadSemesters() async {
+  Future<String?> loadSemesters() async {
     try {
-      _errorMessage = null;
       _semesters = await _semesterRepo.getAllSemesters();
       if (_semesters.isNotEmpty && _activeSemester == null) {
         _activeSemester = _semesters.last;
       }
       notifyListeners();
+      return null;
     } catch (e) {
-      _errorMessage = 'Failed to load semesters: $e';
-      notifyListeners();
+  print(e);
+      return 'Failed to load semesters.';
     }
   }
 
@@ -36,9 +34,8 @@ class SemesterController with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> createSemester(Semester semester) async {
+  Future<String?> createSemester(Semester semester) async {
     try {
-      _errorMessage = null;
       // 1. Insert Semester
       final semId = await _semesterRepo.insertSemester(semester);
       
@@ -46,9 +43,14 @@ class SemesterController with ChangeNotifier {
       await _addSundaysAsHolidays(semId, semester.startDate, semester.endDate);
       
       await loadSemesters();
+      
+      // Set the newly created semester as active
+      final newSem = _semesters.firstWhere((s) => s.id == semId);
+      setActiveSemester(newSem);
+      return null;
     } catch (e) {
-      _errorMessage = 'Failed to create semester: $e';
-      notifyListeners();
+  print(e);
+      return 'Failed to create semester.';
     }
   }
   

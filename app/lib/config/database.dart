@@ -20,8 +20,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
   }
 
@@ -37,6 +38,14 @@ class DatabaseHelper {
       if (statement.trim().isNotEmpty) {
         await db.execute(statement);
       }
+    }
+  }
+
+  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute(
+        'ALTER TABLE Semester ADD COLUMN min_attendance_req REAL NOT NULL DEFAULT 75.0',
+      );
     }
   }
 
