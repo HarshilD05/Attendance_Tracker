@@ -20,7 +20,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -45,6 +45,12 @@ class DatabaseHelper {
     if (oldVersion < 2) {
       await db.execute(
         'ALTER TABLE Semester ADD COLUMN min_attendance_req REAL NOT NULL DEFAULT 75.0',
+      );
+    }
+    if (oldVersion < 3) {
+      // Add a unique index to enforce the UNIQUE(sem_id, name) constraint on existing DBs
+      await db.execute(
+        'CREATE UNIQUE INDEX IF NOT EXISTS idx_subjects_sem_name ON Subjects(sem_id, name)',
       );
     }
   }

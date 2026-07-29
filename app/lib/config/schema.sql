@@ -20,7 +20,8 @@ CREATE TABLE Subjects(
   name TEXT,
   teacher TEXT,
   min_attendance_req REAL,
-  FOREIGN KEY (sem_id) REFERENCES Semester (id) ON DELETE CASCADE
+  FOREIGN KEY (sem_id) REFERENCES Semester (id) ON DELETE CASCADE,
+  UNIQUE(sem_id, name)
 );
 
 CREATE TABLE TimetableSlot(

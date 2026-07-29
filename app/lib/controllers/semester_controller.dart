@@ -4,6 +4,11 @@ import '../models/semester.dart';
 import '../models/holiday.dart';
 import '../repositories/semester_repo.dart';
 import '../repositories/holiday_repo.dart';
+import '../repositories/subject_repo.dart';
+import '../repositories/timetable_slot_repo.dart';
+import '../models/semester_export.dart';
+import '../models/subject.dart';
+import '../models/timetable_slot.dart';
 
 class SemesterController with ChangeNotifier {
   final SemesterRepo _semesterRepo = SemesterRepo();
@@ -70,6 +75,121 @@ class SemesterController with ChangeNotifier {
         await _holidayRepo.insertHoliday(holiday);
       }
       currentDate = currentDate.add(const Duration(days: 1));
+    }
+  }
+
+  Future<String?> exportSemester(int semId) async {
+    try {
+      final semester = _semesters.firstWhere((s) => s.id == semId);
+      final holidays = await _holidayRepo.getHolidaysForSemester(semId);
+      
+      final subjectRepo = SubjectRepo();
+      final subjects = await subjectRepo.getSubjectsForSemester(semId);
+      
+      final timetableRepo = TimetableSlotRepo();
+      final slots = await timetableRepo.getTimetableForSemester(semId);
+      
+      final Map<int, String> subjectIdToName = {
+        for (var s in subjects) s.id!: s.name
+      };
+
+      // Group timetable slots by day
+      final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      final timetableMap = <String, List<Map<String, dynamic>>>{};
+      
+      for (var slot in slots) {
+        final dayName = days[slot.dayOfWeek - 1];
+        timetableMap.putIfAbsent(dayName, () => []);
+        timetableMap[dayName]!.add({
+          'subject_name': subjectIdToName[slot.subId] ?? 'Unknown',
+          'start_time': slot.startTime,
+          'end_time': slot.endTime,
+          'class_room': slot.classRoom,
+        });
+      }
+
+      final exportData = SemesterExportData(
+        semester: semester,
+        holidays: holidays,
+        subjects: subjects,
+        timetable: timetableMap,
+      );
+
+      return exportData.toJsonString();
+    } catch (e) {
+      print('Export error: $e');
+      return null;
+    }
+  }
+
+  Future<String?> importSemester(String jsonStr) async {
+    try {
+      final exportData = SemesterExportData.fromJsonString(jsonStr);
+      
+      // 1. Insert Semester
+      final semId = await _semesterRepo.insertSemester(exportData.semester);
+      
+      // 2. Insert Holidays
+      for (var h in exportData.holidays) {
+        final newHoliday = Holiday(
+          semId: semId,
+          date: h.date,
+          name: h.name,
+        );
+        await _holidayRepo.insertHoliday(newHoliday);
+      }
+      
+      // 3. Insert Subjects and keep track of new IDs
+      final subjectRepo = SubjectRepo();
+      final Map<String, int> subjectNameToId = {};
+      
+      for (var s in exportData.subjects) {
+        final newSubject = Subject(
+          semId: semId,
+          name: s.name,
+          teacher: s.teacher,
+          minAttendanceReq: s.minAttendanceReq,
+        );
+        final newSubId = await subjectRepo.insertSubject(newSubject);
+        subjectNameToId[newSubject.name] = newSubId;
+      }
+      
+      // 4. Insert Timetable Slots
+      final timetableRepo = TimetableSlotRepo();
+      final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      
+      for (var entry in exportData.timetable.entries) {
+        final dayName = entry.key;
+        final dayOfWeek = days.indexOf(dayName) + 1;
+        if (dayOfWeek < 1 || dayOfWeek > 7) continue;
+        
+        for (var rawSlot in entry.value) {
+          final subName = rawSlot['subject_name'] as String;
+          final subId = subjectNameToId[subName];
+          if (subId == null) continue; // Skip if subject doesn't exist
+          
+          final newSlot = TimetableSlot(
+            semId: semId,
+            subId: subId,
+            dayOfWeek: dayOfWeek,
+            startTime: rawSlot['start_time'] as String,
+            endTime: rawSlot['end_time'] as String,
+            classRoom: rawSlot['class_room'] as String,
+          );
+          await timetableRepo.insertTimetable(newSlot);
+        }
+      }
+      
+      await loadSemesters();
+      
+      // Set active
+      final newSem = _semesters.firstWhere((s) => s.id == semId);
+      setActiveSemester(newSem);
+      
+      return null; // Success
+    } catch (e) {
+      print('Import error: $e');
+      return 'Invalid Semester JSON format';
     }
   }
 }

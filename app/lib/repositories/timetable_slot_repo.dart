@@ -20,6 +20,17 @@ class TimetableSlotRepo {
     return List.generate(maps.length, (i) => TimetableSlot.fromMap(maps[i]));
   }
 
+  Future<List<TimetableSlot>> getTimetableForSemester(int semId) async {
+    final db = await dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'TimetableSlot',
+      where: 'sem_id = ?',
+      whereArgs: [semId],
+      orderBy: 'day_of_week ASC, start_time ASC',
+    );
+    return List.generate(maps.length, (i) => TimetableSlot.fromMap(maps[i]));
+  }
+
   Future<int> deleteTimetable(int slotId) async {
     final db = await dbHelper.database;
     return await db.delete('TimetableSlot', where: 'slot_id = ?', whereArgs: [slotId]);
