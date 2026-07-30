@@ -17,21 +17,11 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
 
+  int? _loadedSemId;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
-    });
-  }
-
-  void _loadData() {
-    final activeSem = Provider.of<SemesterController>(context, listen: false).activeSemester;
-    if (activeSem != null) {
-      final ac = Provider.of<AttendanceController>(context, listen: false);
-      ac.setSelectedDate(ac.selectedDate, activeSem.id!);
-      Provider.of<SubjectController>(context, listen: false).loadSubjectsForSemester(activeSem.id!);
-    }
   }
 
   Future<void> _pickDate(BuildContext context, int semId, AttendanceController ac) async {
@@ -62,9 +52,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final activeSem = Provider.of<SemesterController>(context).activeSemester;
+    final semesterController = Provider.of<SemesterController>(context);
+    final activeSem = semesterController.activeSemester;
+    final isLoading = semesterController.isLoading;
     final ac = Provider.of<AttendanceController>(context);
     final sc = Provider.of<SubjectController>(context);
+
+    if (isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Home')),
+        body: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          itemCount: 3,
+          itemBuilder: (context, index) => const _SkeletonCard(),
+        ),
+      );
+    }
+
+    if (activeSem != null && activeSem.id != _loadedSemId) {
+      _loadedSemId = activeSem.id;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ac.setSelectedDate(ac.selectedDate, activeSem.id!);
+          sc.loadSubjectsForSemester(activeSem.id!);
+        }
+      });
+    }
 
     if (activeSem == null) {
       return Scaffold(
@@ -258,6 +271,45 @@ class _QuickMarkButton extends StatelessWidget {
                 fontSize: 13,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Skeleton Card ────────────────────────────────────────────────────────────
+
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final color = Theme.of(context).extension<AppColorScheme>()!.textMuted.withOpacity(0.1);
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: CustomCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(width: 120, height: 24, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
+                Container(width: 50, height: 20, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10))),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Container(width: 80, height: 16, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: Container(height: 40, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)))),
+                const SizedBox(width: 16),
+                Expanded(child: Container(height: 40, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)))),
+              ],
+            )
           ],
         ),
       ),

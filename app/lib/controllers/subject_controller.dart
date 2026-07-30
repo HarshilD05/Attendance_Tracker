@@ -15,7 +15,7 @@ class SubjectController with ChangeNotifier {
       notifyListeners();
       return null;
     } catch (e) {
-  print(e);
+  debugPrint("Error : $e");
       return 'Failed to load subjects.';
     }
   }
@@ -26,7 +26,7 @@ class SubjectController with ChangeNotifier {
       await loadSubjectsForSemester(subject.semId);
       return null;
     } catch (e) {
-  print(e);
+  debugPrint("Error : $e");
       return 'Failed to add subject.';
     }
   }
@@ -37,7 +37,7 @@ class SubjectController with ChangeNotifier {
       await loadSubjectsForSemester(semId);
       return null;
     } catch (e) {
-  print(e);
+  debugPrint("Error : $e");
       return 'Failed to delete subject.';
     }
   }

@@ -23,7 +23,7 @@ class TimetableController with ChangeNotifier {
       notifyListeners();
       return null;
     } catch (e) {
-      print(e);
+      debugPrint("Error : $e");
       return 'Failed to load timetable.';
     }
   }
@@ -55,7 +55,7 @@ class TimetableController with ChangeNotifier {
       await loadTimetable(newSlot.semId);
       return null;
     } catch (e) {
-      print(e);
+      debugPrint("Error : $e");
       return 'Failed to add slot.';
     }
   }
@@ -66,7 +66,7 @@ class TimetableController with ChangeNotifier {
       await loadTimetable(semId);
       return null;
     } catch (e) {
-      print(e);
+      debugPrint("Error : $e");
       return 'Failed to remove slot.';
     }
   }

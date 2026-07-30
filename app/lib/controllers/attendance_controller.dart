@@ -33,7 +33,7 @@ class AttendanceController with ChangeNotifier {
       notifyListeners();
       return null;
     } catch (e) {
-      print(e);
+      debugPrint("Error : $e");
       return 'Failed to load schedule.';
     }
   }
@@ -64,7 +64,7 @@ class AttendanceController with ChangeNotifier {
       await loadScheduleForDate(semId);
       return null;
     } catch (e) {
-      print(e);
+      debugPrint("Error : $e");
       return 'Failed to mark attendance.';
     }
   }
@@ -98,7 +98,7 @@ class AttendanceController with ChangeNotifier {
       await loadScheduleForDate(semId);
       return null;
     } catch (e) {
-      print(e);
+      debugPrint("Error : $e");
       return 'Failed to mark all attendance.';
     }
   }

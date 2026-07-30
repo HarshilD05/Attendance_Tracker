@@ -16,20 +16,45 @@ class SemesterController with ChangeNotifier {
 
   List<Semester> _semesters = [];
   Semester? _activeSemester;
+  bool _isLoading = true;
 
   List<Semester> get semesters => _semesters;
   Semester? get activeSemester => _activeSemester;
+  bool get isLoading => _isLoading;
 
   Future<String?> loadSemesters() async {
+    _isLoading = true;
+    notifyListeners();
     try {
       _semesters = await _semesterRepo.getAllSemesters();
       if (_semesters.isNotEmpty && _activeSemester == null) {
-        _activeSemester = _semesters.last;
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final format = DateFormat('yyyy-MM-dd');
+        
+        Semester? matchedSemester;
+        for (var sem in _semesters) {
+          try {
+            final start = format.parse(sem.startDate);
+            final end = format.parse(sem.endDate);
+            if ((today.isAfter(start) || today.isAtSameMomentAs(start)) && 
+                (today.isBefore(end) || today.isAtSameMomentAs(end))) {
+              matchedSemester = sem;
+              break;
+            }
+          } catch (e) {
+            // ignore parsing errors and continue
+          }
+        }
+        _activeSemester = matchedSemester ?? _semesters.last;
       }
+      _isLoading = false;
       notifyListeners();
       return null;
     } catch (e) {
-  print(e);
+      debugPrint("Error : $e");
+      _isLoading = false;
+      notifyListeners();
       return 'Failed to load semesters.';
     }
   }
@@ -40,6 +65,9 @@ class SemesterController with ChangeNotifier {
   }
 
   Future<String?> createSemester(Semester semester) async {
+    if (_isOverlapping(semester.startDate, semester.endDate)) {
+      return 'Dates overlap with an existing semester.';
+    }
     try {
       // 1. Insert Semester
       final semId = await _semesterRepo.insertSemester(semester);
@@ -54,9 +82,44 @@ class SemesterController with ChangeNotifier {
       setActiveSemester(newSem);
       return null;
     } catch (e) {
-  print(e);
+      debugPrint("Error : $e");
       return 'Failed to create semester.';
     }
+  }
+
+  Future<String?> deleteSemester(int semId) async {
+    try {
+      await _semesterRepo.deleteSemester(semId);
+      // Clear active semester to avoid dangling reference.
+      _activeSemester = null;
+      await loadSemesters();
+      return null;
+    } catch (e) {
+      debugPrint('Delete semester error: $e');
+      return 'Failed to delete semester.';
+    }
+  }
+
+
+  bool _isOverlapping(String newStartStr, String newEndStr) {
+    final format = DateFormat('yyyy-MM-dd');
+    try {
+      final newStart = format.parse(newStartStr);
+      final newEnd = format.parse(newEndStr);
+      
+      for (var sem in _semesters) {
+        final existingStart = format.parse(sem.startDate);
+        final existingEnd = format.parse(sem.endDate);
+        
+        if ((newStart.isBefore(existingEnd) || newStart.isAtSameMomentAs(existingEnd)) &&
+            (newEnd.isAfter(existingStart) || newEnd.isAtSameMomentAs(existingStart))) {
+          return true;
+        }
+      }
+    } catch (e) {
+      return false;
+    }
+    return false;
   }
   
   Future<void> _addSundaysAsHolidays(int semId, String startDateStr, String endDateStr) async {
@@ -126,6 +189,10 @@ class SemesterController with ChangeNotifier {
     try {
       final exportData = SemesterExportData.fromJsonString(jsonStr);
       
+      if (_isOverlapping(exportData.semester.startDate, exportData.semester.endDate)) {
+        return 'Imported dates overlap with an existing semester.';
+      }
+
       // 1. Insert Semester
       final semId = await _semesterRepo.insertSemester(exportData.semester);
       

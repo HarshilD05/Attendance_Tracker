@@ -21,6 +21,10 @@ class DatabaseHelper {
     return await openDatabase(
       path,
       version: 3,
+      onConfigure: (db) async {
+        // Required for ON DELETE CASCADE to work in SQLite.
+        await db.execute('PRAGMA foreign_keys = ON');
+      },
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );

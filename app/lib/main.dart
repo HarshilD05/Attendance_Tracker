@@ -29,7 +29,7 @@ class AttendanceTrackerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AnalyticsController()),
       ],
       child: MaterialApp(
-        title: 'Attendance Tracker',
+        title: 'AttenTracker',
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,

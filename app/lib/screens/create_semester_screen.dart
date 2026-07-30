@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:file_selector/file_selector.dart';
 import '../controllers/semester_controller.dart';
 import '../models/semester.dart';
 import '../widgets/primary_button.dart';
@@ -80,7 +81,8 @@ class _CreateSemesterScreenState extends State<CreateSemesterScreen> {
             icon: const Icon(Icons.download),
             tooltip: 'Import JSON',
             onPressed: () {
-              // TODO: Implement JSON Import logic
+              final controller = Provider.of<SemesterController>(context, listen: false);
+              _importSemester(context, controller);
             },
           )
         ],
@@ -143,5 +145,41 @@ class _CreateSemesterScreenState extends State<CreateSemesterScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _importSemester(BuildContext context, SemesterController controller) async {
+    try {
+      const XTypeGroup typeGroup = XTypeGroup(
+        label: 'JSON',
+        extensions: <String>['json'],
+        mimeTypes: <String>['application/json'],
+      );
+      final XFile? file = await openFile(acceptedTypeGroups: <XTypeGroup>[typeGroup]);
+
+      if (file != null) {
+        final jsonStr = await file.readAsString();
+        final error = await controller.importSemester(jsonStr);
+
+        if (mounted) {
+          if (error != null) {
+            showErrorSnackBar(context, error);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Semester imported successfully!'),
+              ),
+            );
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const SemesterDetailsScreen()),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        showErrorSnackBar(context, 'Failed to read file. Ensure it is a valid semester JSON.');
+      }
+    }
   }
 }

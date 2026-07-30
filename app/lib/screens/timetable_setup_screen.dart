@@ -191,10 +191,11 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
                         final error = await tc.addSlot(slot);
                         
                         if (mounted) {
+                          // Always close the sheet first so the snackbar
+                          // is not blocked behind the bottom sheet overlay.
+                          Navigator.pop(context);
                           if (error != null) {
-                            showErrorSnackBar(context, error);
-                          } else {
-                            Navigator.pop(context);
+                            showErrorSnackBar(this.context, error);
                           }
                         }
                       },
@@ -293,7 +294,7 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
                 final et = format24.parse(slot.endTime);
                 displayTime = '${format12.format(st)} - ${format12.format(et)}';
               } catch (e) {
-  print(e);
+  debugPrint("Error : $e");
                 displayTime = '${slot.startTime} - ${slot.endTime}';
               }
 

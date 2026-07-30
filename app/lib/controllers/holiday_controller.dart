@@ -15,7 +15,7 @@ class HolidayController with ChangeNotifier {
       notifyListeners();
       return null;
     } catch (e) {
-  print(e);
+  debugPrint("Error : $e");
       return 'Failed to load holidays.';
     }
   }
@@ -26,7 +26,7 @@ class HolidayController with ChangeNotifier {
       await loadHolidaysForSemester(holiday.semId);
       return null;
     } catch (e) {
-  print(e);
+  debugPrint("Error : $e");
       return 'Failed to add holiday.';
     }
   }
@@ -37,7 +37,7 @@ class HolidayController with ChangeNotifier {
       await loadHolidaysForSemester(semId);
       return null;
     } catch (e) {
-  print(e);
+  debugPrint("Error : $e");
       return 'Failed to remove holiday.';
     }
   }
