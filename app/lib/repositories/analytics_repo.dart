@@ -5,7 +5,7 @@ class AnalyticsRepo {
   final dbHelper = DatabaseHelper.instance;
 
   /// Get attendance stats for a single subject within optional date range.
-  /// Only counts rows where lec_status = 'Conducted'.
+  /// Only counts rows where is_cancelled = 0.
   Future<AttendanceStats> getSubjectStats(
     int semId,
     int subId, {
@@ -14,8 +14,8 @@ class AnalyticsRepo {
   }) async {
     final db = await dbHelper.database;
 
-    String where = 'sem_id = ? AND sub_id = ? AND lec_status = ?';
-    List<dynamic> args = [semId, subId, 'Conducted'];
+    String where = 'sem_id = ? AND sub_id = ? AND is_cancelled = ?';
+    List<dynamic> args = [semId, subId, 0];
 
     if (startDate != null) {
       where += ' AND date >= ?';
@@ -29,15 +29,18 @@ class AnalyticsRepo {
     final rows = await db.query('Attendance', where: where, whereArgs: args);
 
     int attended = 0;
+    int unmarked = 0;
     int total = rows.length;
     for (final row in rows) {
       if (row['student_status'] == 'P') attended++;
+      else if (row['student_status'] == 'U') unmarked++;
     }
 
     return AttendanceStats(
       attended: attended,
       total: total,
-      absent: total - attended,
+      absent: total - attended - unmarked,
+      unmarked: unmarked,
     );
   }
 
@@ -49,8 +52,8 @@ class AnalyticsRepo {
   }) async {
     final db = await dbHelper.database;
 
-    String where = 'sem_id = ? AND lec_status = ?';
-    List<dynamic> args = [semId, 'Conducted'];
+    String where = 'sem_id = ? AND is_cancelled = ?';
+    List<dynamic> args = [semId, 0];
 
     if (startDate != null) {
       where += ' AND date >= ?';
@@ -64,6 +67,7 @@ class AnalyticsRepo {
     final rows = await db.query('Attendance', where: where, whereArgs: args);
 
     final Map<int, int> attended = {};
+    final Map<int, int> unmarked = {};
     final Map<int, int> total = {};
 
     for (final row in rows) {
@@ -71,6 +75,8 @@ class AnalyticsRepo {
       total[subId] = (total[subId] ?? 0) + 1;
       if (row['student_status'] == 'P') {
         attended[subId] = (attended[subId] ?? 0) + 1;
+      } else if (row['student_status'] == 'U') {
+        unmarked[subId] = (unmarked[subId] ?? 0) + 1;
       }
     }
 
@@ -78,7 +84,8 @@ class AnalyticsRepo {
     for (final subId in total.keys) {
       final t = total[subId]!;
       final a = attended[subId] ?? 0;
-      result[subId] = AttendanceStats(attended: a, total: t, absent: t - a);
+      final u = unmarked[subId] ?? 0;
+      result[subId] = AttendanceStats(attended: a, total: t, absent: t - a - u, unmarked: u);
     }
     return result;
   }
@@ -91,8 +98,8 @@ class AnalyticsRepo {
   }) async {
     final db = await dbHelper.database;
 
-    String where = 'sem_id = ? AND lec_status = ?';
-    List<dynamic> args = [semId, 'Conducted'];
+    String where = 'sem_id = ? AND is_cancelled = ?';
+    List<dynamic> args = [semId, 0];
     if (subId != null) {
       where += ' AND sub_id = ?';
       args.add(subId);
@@ -101,6 +108,7 @@ class AnalyticsRepo {
     final rows = await db.query('Attendance', where: where, whereArgs: args);
 
     final Map<String, int> attendedByMonth = {};
+    final Map<String, int> unmarkedByMonth = {};
     final Map<String, int> totalByMonth = {};
 
     for (final row in rows) {
@@ -109,6 +117,8 @@ class AnalyticsRepo {
       totalByMonth[monthKey] = (totalByMonth[monthKey] ?? 0) + 1;
       if (row['student_status'] == 'P') {
         attendedByMonth[monthKey] = (attendedByMonth[monthKey] ?? 0) + 1;
+      } else if (row['student_status'] == 'U') {
+        unmarkedByMonth[monthKey] = (unmarkedByMonth[monthKey] ?? 0) + 1;
       }
     }
 
@@ -116,7 +126,8 @@ class AnalyticsRepo {
     for (final key in totalByMonth.keys) {
       final t = totalByMonth[key]!;
       final a = attendedByMonth[key] ?? 0;
-      result[key] = AttendanceStats(attended: a, total: t, absent: t - a);
+      final u = unmarkedByMonth[key] ?? 0;
+      result[key] = AttendanceStats(attended: a, total: t, absent: t - a - u, unmarked: u);
     }
     return result;
   }
@@ -131,11 +142,12 @@ class AnalyticsRepo {
     // SQLite: use LIKE for month prefix match on date column
     final rows = await db.query(
       'Attendance',
-      where: 'sem_id = ? AND lec_status = ? AND date LIKE ?',
-      whereArgs: [semId, 'Conducted', '$monthKey%'],
+      where: 'sem_id = ? AND is_cancelled = ? AND date LIKE ?',
+      whereArgs: [semId, 0, '$monthKey%'],
     );
 
     final Map<int, int> attended = {};
+    final Map<int, int> unmarked = {};
     final Map<int, int> total = {};
 
     for (final row in rows) {
@@ -143,6 +155,8 @@ class AnalyticsRepo {
       total[subId] = (total[subId] ?? 0) + 1;
       if (row['student_status'] == 'P') {
         attended[subId] = (attended[subId] ?? 0) + 1;
+      } else if (row['student_status'] == 'U') {
+        unmarked[subId] = (unmarked[subId] ?? 0) + 1;
       }
     }
 
@@ -150,7 +164,8 @@ class AnalyticsRepo {
     for (final subId in total.keys) {
       final t = total[subId]!;
       final a = attended[subId] ?? 0;
-      result[subId] = AttendanceStats(attended: a, total: t, absent: t - a);
+      final u = unmarked[subId] ?? 0;
+      result[subId] = AttendanceStats(attended: a, total: t, absent: t - a - u, unmarked: u);
     }
     return result;
   }

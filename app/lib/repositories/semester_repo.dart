@@ -24,6 +24,11 @@ class SemesterRepo {
     return null;
   }
 
+  Future<int> updateSemester(Semester semester) async {
+    final db = await dbHelper.database;
+    return await db.update('Semester', semester.toMap(), where: 'id = ?', whereArgs: [semester.id]);
+  }
+
   Future<int> deleteSemester(int id) async {
     final db = await dbHelper.database;
     return await db.delete('Semester', where: 'id = ?', whereArgs: [id]);

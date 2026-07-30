@@ -43,7 +43,25 @@ class SemesterDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Dates: ${activeSem.startDate} to ${activeSem.endDate}', style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(activeSem.startDate),
+                    onPressed: null,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.calendar_today),
+                    label: Text(activeSem.endDate),
+                    onPressed: null,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 32),
             PrimaryButton(
               text: 'Manage Subjects',

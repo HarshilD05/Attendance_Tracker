@@ -4,8 +4,9 @@ import '../config/theme.dart';
 class CustomCard extends StatelessWidget {
   final Widget child;
   final VoidCallback? onTap;
+  final Color? borderColor;
 
-  const CustomCard({Key? key, required this.child, this.onTap}) : super(key: key);
+  const CustomCard({Key? key, required this.child, this.onTap, this.borderColor}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +15,10 @@ class CustomCard extends StatelessWidget {
       onTap: onTap,
       child: Card(
         color: colors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: borderColor != null ? BorderSide(color: borderColor!, width: 2) : BorderSide.none,
+        ),
         elevation: 2,
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
         child: Padding(

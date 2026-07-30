@@ -49,7 +49,6 @@ app.*.map.json
 
 # Platform Specific Files
 /ios
-/android
 /windows
 /linux
 /macos

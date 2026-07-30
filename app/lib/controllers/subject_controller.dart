@@ -31,6 +31,17 @@ class SubjectController with ChangeNotifier {
     }
   }
 
+  Future<String?> updateSubject(Subject subject) async {
+    try {
+      await _subjectRepo.updateSubject(subject);
+      await loadSubjectsForSemester(subject.semId);
+      return null;
+    } catch (e) {
+  debugPrint("Error : $e");
+      return 'Failed to update subject.';
+    }
+  }
+
   Future<String?> removeSubject(int subjectId, int semId) async {
     try {
       await _subjectRepo.deleteSubject(subjectId);

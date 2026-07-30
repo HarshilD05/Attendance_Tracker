@@ -18,6 +18,7 @@ class AppColorScheme extends ThemeExtension<AppColorScheme> {
   // Attendance status — used on home screen buttons & legend dots
   final Color present;
   final Color absent;
+  final Color unmarked;
 
   // Analytics zone colors — filled based on attendance % vs threshold
   final Color attendanceSafe;     // >= minReq + 5%
@@ -35,6 +36,7 @@ class AppColorScheme extends ThemeExtension<AppColorScheme> {
     required this.primary,
     required this.present,
     required this.absent,
+    required this.unmarked,
     required this.attendanceSafe,
     required this.attendanceWarning,
     required this.attendanceDanger,
@@ -50,6 +52,7 @@ class AppColorScheme extends ThemeExtension<AppColorScheme> {
     Color? primary,
     Color? present,
     Color? absent,
+    Color? unmarked,
     Color? attendanceSafe,
     Color? attendanceWarning,
     Color? attendanceDanger,
@@ -63,6 +66,7 @@ class AppColorScheme extends ThemeExtension<AppColorScheme> {
       primary:            primary            ?? this.primary,
       present:            present            ?? this.present,
       absent:             absent             ?? this.absent,
+      unmarked:           unmarked           ?? this.unmarked,
       attendanceSafe:     attendanceSafe     ?? this.attendanceSafe,
       attendanceWarning:  attendanceWarning  ?? this.attendanceWarning,
       attendanceDanger:   attendanceDanger   ?? this.attendanceDanger,
@@ -81,6 +85,7 @@ class AppColorScheme extends ThemeExtension<AppColorScheme> {
       primary:            Color.lerp(primary,           other.primary,           t)!,
       present:            Color.lerp(present,           other.present,           t)!,
       absent:             Color.lerp(absent,            other.absent,            t)!,
+      unmarked:           Color.lerp(unmarked,          other.unmarked,          t)!,
       attendanceSafe:     Color.lerp(attendanceSafe,    other.attendanceSafe,    t)!,
       attendanceWarning:  Color.lerp(attendanceWarning, other.attendanceWarning, t)!,
       attendanceDanger:   Color.lerp(attendanceDanger,  other.attendanceDanger,  t)!,
@@ -97,25 +102,26 @@ class AppTheme {
   static ThemeData get darkTheme {
     const scheme = AppColorScheme(
       // Surfaces
-      background:        Color(0xFF121212),
-      surface:           Color(0xFF1E1E1E),
+      background:        Color(0xFF121212), // Deep pure dark
+      surface:           Color(0xFF1C1C1E), // Slightly lighter for cards
 
       // Brand
-      primary:           Color(0xFF7C4DFF),
+      primary:           Color(0xFF5C52E5), // Original Deep indigo/purple
 
       // Attendance status
-      present:           Color(0xFF69F0AE), // soft mint-green
-      absent:            Color(0xFFEF5350), // deep red
+      present:           Color(0xFF2ECC71), // Original Vibrant green
+      absent:            Color(0xFFE74C3C), // Original Soft red/coral
+      unmarked:          Color(0xFF14BCFF), // Original Cyan Blue
 
       // Analytics zone colors
-      attendanceSafe:    Color(0xFF69F0AE), // soft mint-green
-      attendanceWarning: Color(0xFFFFD740), // golden yellow
-      attendanceDanger:  Color(0xFFEF5350), // deep red
+      attendanceSafe:    Color(0xFF2ECC71), // Original Green
+      attendanceWarning: Color(0xFFF39C12), // Original Orange/Gold
+      attendanceDanger:  Color(0xFFE74C3C), // Original Red
 
       // Text
-      textPrimary:       Colors.white,
-      textSecondary:     Color(0x99FFFFFF), // white60
-      textMuted:         Color(0x61FFFFFF), // white38
+      textPrimary:       Color(0xFFF9FAFB), // Off-white
+      textSecondary:     Color(0xFFA1A1AA), // Slate gray
+      textMuted:         Color(0xFF52525B), // Dark slate
     );
 
     return ThemeData(
@@ -128,9 +134,9 @@ class AppTheme {
         backgroundColor: scheme.background,
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-        titleTextStyle: const TextStyle(
-          color: Colors.white,
+        iconTheme: IconThemeData(color: scheme.textPrimary),
+        titleTextStyle: TextStyle(
+          color: scheme.textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.bold,
         ),
@@ -139,18 +145,18 @@ class AppTheme {
         backgroundColor: scheme.primary,
         foregroundColor: Colors.white,
       ),
-      tabBarTheme: const TabBarThemeData(
-        labelColor: Colors.white,
-        unselectedLabelColor: Colors.white70,
-        indicatorColor: Colors.white,
+      tabBarTheme: TabBarThemeData(
+        labelColor: scheme.textPrimary,
+        unselectedLabelColor: scheme.textMuted,
+        indicatorColor: scheme.primary,
       ),
       colorScheme: ColorScheme.dark(
         primary: scheme.primary,
         surface: scheme.surface,
       ),
-      textTheme: const TextTheme(
-        bodyLarge:  TextStyle(color: Colors.white),
-        bodyMedium: TextStyle(color: Colors.grey),
+      textTheme: TextTheme(
+        bodyLarge:  TextStyle(color: scheme.textPrimary),
+        bodyMedium: TextStyle(color: scheme.textSecondary),
       ),
     );
   }
@@ -158,25 +164,26 @@ class AppTheme {
   static ThemeData get lightTheme {
     const scheme = AppColorScheme(
       // Surfaces
-      background:        Color(0xFFF5F5F5), // Light gray background
+      background:        Color(0xFFF8F9FA), // Very light gray background matching the image
       surface:           Color(0xFFFFFFFF), // White cards
 
       // Brand
-      primary:           Color(0xFF7C4DFF), // Keep purple accent
+      primary:           Color(0xFF5C52E5), // Deep indigo/purple seen in headers and active icons
 
-      // Attendance status
-      present:           Color(0xFF2E7D32), // Darker green for contrast on light bg
-      absent:            Color(0xFFD32F2F), // Darker red
+      // Status & Attendance
+      present:           Color(0xFF2ECC71), // Vibrant green 
+      absent:            Color(0xFFE74C3C), // Soft red/coral
+      unmarked:          Color(0xFF14BCFF), // Cyan Blue
 
       // Analytics zone colors
-      attendanceSafe:    Color(0xFF2E7D32), // Darker green
-      attendanceWarning: Color(0xFFF57F17), // Darker orange/gold
-      attendanceDanger:  Color(0xFFD32F2F), // Darker red
+      attendanceSafe:    Color(0xFF2ECC71), // Green
+      attendanceWarning: Color(0xFFF39C12), // Orange/Gold
+      attendanceDanger:  Color(0xFFE74C3C), // Red
 
       // Text
-      textPrimary:       Color(0xFF121212), // Near black
-      textSecondary:     Color(0x99000000), // black60
-      textMuted:         Color(0x61000000), // black38
+      textPrimary:       Color(0xFF1E1E1E), // Near black for main headings
+      textSecondary:     Color(0xFF757575), // Gray for subtitles (e.g., "Good Morning!")
+      textMuted:         Color(0xFFBDBDBD), // Lighter gray for dates/timestamps
     );
 
     return ThemeData(
@@ -185,33 +192,68 @@ class AppTheme {
       primaryColor: scheme.primary,
       cardColor: scheme.surface,
       extensions: const [scheme],
+      
+      // Updated AppBar to match the image (white background, black text/icons)
       appBarTheme: AppBarTheme(
-        backgroundColor: scheme.primary, // Purple app bar in light mode looks good
+        backgroundColor: scheme.background, 
         elevation: 0,
         centerTitle: true,
-        iconTheme: const IconThemeData(color: Colors.white),
-        titleTextStyle: const TextStyle(
-          color: Colors.white,
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
+        iconTheme: IconThemeData(color: scheme.textPrimary),
+        titleTextStyle: TextStyle(
+          color: scheme.textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
         ),
       ),
+      
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: scheme.primary,
         foregroundColor: Colors.white,
       ),
-      tabBarTheme: const TabBarThemeData(
-        labelColor: Colors.white,
-        unselectedLabelColor: Colors.white70,
-        indicatorColor: Colors.white,
+      
+      // Tab bar styled for the "Exams Results" tabs seen in the image
+      tabBarTheme: TabBarThemeData(
+        labelColor: scheme.textPrimary,
+        unselectedLabelColor: scheme.textMuted,
+        indicatorColor: scheme.primary,
+        indicatorSize: TabBarIndicatorSize.label,
+        labelStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
+      
+      // Bottom Navigation Bar
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: scheme.surface,
+        selectedItemColor: scheme.primary,
+        unselectedItemColor: scheme.textMuted,
+        elevation: 8,
+        type: BottomNavigationBarType.fixed,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+      ),
+
+      // General Color Scheme
       colorScheme: ColorScheme.light(
         primary: scheme.primary,
         surface: scheme.surface,
+        error: scheme.attendanceDanger,
       ),
-      textTheme: const TextTheme(
-        bodyLarge:  TextStyle(color: Colors.black87),
-        bodyMedium: TextStyle(color: Colors.black54),
+      
+      // Text Theme
+      textTheme: TextTheme(
+        displayLarge: TextStyle(color: scheme.textPrimary, fontWeight: FontWeight.bold),
+        titleLarge: TextStyle(color: scheme.textPrimary, fontWeight: FontWeight.bold),
+        bodyLarge:  TextStyle(color: scheme.textPrimary),
+        bodyMedium: TextStyle(color: scheme.textSecondary),
+      ),
+      
+      // Card Theme for the rounded corners seen in the UI
+      cardTheme: CardThemeData(
+        color: scheme.surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        margin: const EdgeInsets.symmetric(vertical: 8),
       ),
     );
   }

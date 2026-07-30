@@ -1,12 +1,15 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../controllers/semester_controller.dart';
 import '../controllers/holiday_controller.dart';
+import '../controllers/attendance_controller.dart';
 import '../models/holiday.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/error_snackbar.dart';
+import '../widgets/dashed_circle_painter.dart';
 import '../config/theme.dart';
 
 class HolidaysScreen extends StatefulWidget {
@@ -30,6 +33,8 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
           showErrorSnackBar(context, error);
         }
         
+        Provider.of<AttendanceController>(context, listen: false).loadUnmarkedDates(activeSem.id!);
+
         final format = DateFormat('yyyy-MM-dd');
         final semStart = format.parse(activeSem.startDate);
         if (_focusedDay.isBefore(semStart)) {
@@ -125,6 +130,7 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
   Widget build(BuildContext context) {
     final activeSem = Provider.of<SemesterController>(context).activeSemester;
     final holidayController = Provider.of<HolidayController>(context);
+    final attendanceController = Provider.of<AttendanceController>(context);
 
     if (activeSem == null) return const Scaffold();
 
@@ -134,6 +140,7 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
 
     // Create a set of holiday date strings for quick lookup
     final holidayDates = { for (var h in holidayController.holidays) h.date : h };
+    final unmarkedDates = attendanceController.unmarkedDates;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Manage Holidays')),
@@ -148,6 +155,51 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
             calendarStyle: CalendarStyle(
               todayDecoration: BoxDecoration(color: Theme.of(context).extension<AppColorScheme>()!.primary, shape: BoxShape.circle),
               markerDecoration: BoxDecoration(color: Theme.of(context).extension<AppColorScheme>()!.absent, shape: BoxShape.circle),
+              disabledTextStyle: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textMuted.withOpacity(0.3)),
+              outsideTextStyle: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textMuted.withOpacity(0.3)),
+            ),
+            calendarBuilders: CalendarBuilders(
+              defaultBuilder: (context, day, focusedDay) {
+                final dateStr = format.format(day);
+                if (unmarkedDates.contains(dateStr)) {
+                  return Container(
+                    margin: const EdgeInsets.all(6.0),
+                    alignment: Alignment.center,
+                    child: CustomPaint(
+                      painter: DashedCirclePainter(color: Theme.of(context).extension<AppColorScheme>()!.unmarked),
+                      child: Center(
+                        child: Text(
+                          '${day.day}',
+                          style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textPrimary),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return null;
+              },
+              todayBuilder: (context, day, focusedDay) {
+                final dateStr = format.format(day);
+                if (unmarkedDates.contains(dateStr)) {
+                  return Container(
+                    margin: const EdgeInsets.all(6.0),
+                    alignment: Alignment.center,
+                    child: CustomPaint(
+                      painter: DashedCirclePainter(color: Theme.of(context).extension<AppColorScheme>()!.unmarked),
+                      child: Container(
+                        decoration: BoxDecoration(color: Theme.of(context).extension<AppColorScheme>()!.primary, shape: BoxShape.circle),
+                        child: Center(
+                          child: Text(
+                            '${day.day}',
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return null;
+              },
             ),
             eventLoader: (day) {
               final dateStr = format.format(day);

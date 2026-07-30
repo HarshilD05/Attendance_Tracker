@@ -23,4 +23,9 @@ class SubjectRepo {
     final db = await dbHelper.database;
     return await db.delete('Subjects', where: 'id = ?', whereArgs: [id]);
   }
+
+  Future<int> updateSubject(Subject subject) async {
+    final db = await dbHelper.database;
+    return await db.update('Subjects', subject.toMap(), where: 'id = ?', whereArgs: [subject.id]);
+  }
 }

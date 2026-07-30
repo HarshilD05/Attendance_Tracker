@@ -16,14 +16,18 @@ Color _zoneColor(double percentage, double minReq, AppColorScheme colors) {
 
 class _DonutPainter extends CustomPainter {
   final double percentage;
+  final double unmarkedPercentage;
   final Color fillColor;
+  final Color unmarkedColor;
   final Color trackColor;
   final Animation<double> animation;
   final double strokeWidth;
 
   _DonutPainter({
     required this.percentage,
+    required this.unmarkedPercentage,
     required this.fillColor,
+    required this.unmarkedColor,
     required this.trackColor,
     required this.animation,
     required this.strokeWidth,
@@ -49,11 +53,30 @@ class _DonutPainter extends CustomPainter {
 
     canvas.drawCircle(center, innerRadius, trackPaint);
 
-    final sweepAngle = (percentage / 100) * 2 * pi * animation.value;
+    double startAngle = -pi / 2;
+    final presentAngle = (percentage / 100) * 2 * pi * animation.value;
+
+    if (unmarkedPercentage > 0) {
+      final unmarkedPaint = Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = strokeWidth
+        ..color = unmarkedColor
+        ..strokeCap = StrokeCap.round;
+
+      final unmarkedAngle = (unmarkedPercentage / 100) * 2 * pi * animation.value;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: innerRadius),
+        startAngle + presentAngle,
+        unmarkedAngle,
+        false,
+        unmarkedPaint,
+      );
+    }
+
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: innerRadius),
-      -pi / 2,
-      sweepAngle,
+      startAngle,
+      presentAngle,
       false,
       fillPaint,
     );
@@ -62,7 +85,9 @@ class _DonutPainter extends CustomPainter {
   @override
   bool shouldRepaint(_DonutPainter old) =>
       old.percentage != percentage ||
+      old.unmarkedPercentage != unmarkedPercentage ||
       old.fillColor != fillColor ||
+      old.unmarkedColor != unmarkedColor ||
       old.trackColor != trackColor ||
       old.animation.value != animation.value ||
       old.strokeWidth != strokeWidth;
@@ -72,6 +97,7 @@ class _DonutPainter extends CustomPainter {
 
 class _AnimatedDonut extends StatefulWidget {
   final double percentage;
+  final double unmarkedPercentage;
   final double minReq;
   final double size;
   final double strokeWidth;
@@ -79,6 +105,7 @@ class _AnimatedDonut extends StatefulWidget {
 
   const _AnimatedDonut({
     required this.percentage,
+    required this.unmarkedPercentage,
     required this.minReq,
     this.size = 110,
     this.strokeWidth = 10.0,
@@ -108,7 +135,7 @@ class _AnimatedDonutState extends State<_AnimatedDonut>
   @override
   void didUpdateWidget(_AnimatedDonut old) {
     super.didUpdateWidget(old);
-    if (old.percentage != widget.percentage) {
+    if (old.percentage != widget.percentage || old.unmarkedPercentage != widget.unmarkedPercentage) {
       _controller.reset();
       _controller.forward();
     }
@@ -138,7 +165,9 @@ class _AnimatedDonutState extends State<_AnimatedDonut>
               size: Size(widget.size, widget.size),
               painter: _DonutPainter(
                 percentage: widget.percentage,
+                unmarkedPercentage: widget.unmarkedPercentage,
                 fillColor: color,
+                unmarkedColor: colors.unmarked,
                 trackColor: colors.textMuted.withOpacity(0.15),
                 animation: _animation,
                 strokeWidth: widget.strokeWidth,
@@ -281,6 +310,7 @@ class AttendanceCard extends StatelessWidget {
             children: [
               _AnimatedDonut(
                 percentage: pct,
+                unmarkedPercentage: stats.unmarkedPercentage,
                 minReq: data.minReq,
                 size: 110,
                 strokeWidth: 10.0,
@@ -294,6 +324,8 @@ class AttendanceCard extends StatelessWidget {
                     _LegendRow(color: colors.present, label: '${stats.attended} Present'),
                     const SizedBox(height: 8),
                     _LegendRow(color: colors.absent, label: '${stats.absent} Absent'),
+                    const SizedBox(height: 8),
+                    _LegendRow(color: colors.unmarked, label: '${stats.unmarked} Unmarked'),
                     const SizedBox(height: 8),
                     _LegendRow(
                       color: colors.textMuted,
@@ -395,7 +427,7 @@ class SubjectAttendanceRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${data.stats.attended}/${data.stats.total} lecs',
+                    '${data.stats.attended}/${data.stats.total} lecs • ${data.stats.unmarked} Unmarked',
                     style: TextStyle(fontSize: 12, color: colors.textSecondary),
                   ),
                 ],
@@ -404,6 +436,7 @@ class SubjectAttendanceRow extends StatelessWidget {
             // Mini donut: larger (72), thinner stroke (7), smaller font (12)
             _AnimatedDonut(
               percentage: pct,
+              unmarkedPercentage: data.stats.unmarkedPercentage,
               minReq: data.minReq,
               size: 72,
               strokeWidth: 7.0,

@@ -101,13 +101,33 @@ class SemesterController with ChangeNotifier {
   }
 
 
-  bool _isOverlapping(String newStartStr, String newEndStr) {
+  Future<String?> updateSemester(Semester semester) async {
+    if (_isOverlapping(semester.startDate, semester.endDate, semester.id)) {
+      return 'Dates overlap with an existing semester.';
+    }
+    try {
+      await _semesterRepo.updateSemester(semester);
+      await loadSemesters();
+      if (_activeSemester?.id == semester.id) {
+        _activeSemester = _semesters.firstWhere((s) => s.id == semester.id);
+      }
+      notifyListeners();
+      return null;
+    } catch (e) {
+      debugPrint("Error : $e");
+      return 'Failed to update semester.';
+    }
+  }
+
+  bool _isOverlapping(String newStartStr, String newEndStr, [int? ignoreId]) {
     final format = DateFormat('yyyy-MM-dd');
     try {
       final newStart = format.parse(newStartStr);
       final newEnd = format.parse(newEndStr);
       
       for (var sem in _semesters) {
+        if (sem.id == ignoreId) continue;
+        
         final existingStart = format.parse(sem.startDate);
         final existingEnd = format.parse(sem.endDate);
         

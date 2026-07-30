@@ -7,6 +7,8 @@ import '../controllers/semester_controller.dart';
 import '../widgets/custom_card.dart';
 import 'create_semester_screen.dart';
 import 'semester_details_screen.dart';
+import 'package:intl/intl.dart';
+import '../models/semester.dart';
 
 class SemestersScreen extends StatelessWidget {
   const SemestersScreen({Key? key}) : super(key: key);
@@ -42,11 +44,33 @@ class SemestersScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(sem.name, style: Theme.of(context).textTheme.titleLarge),
-                            const SizedBox(height: 8),
-                            Text('${sem.startDate} to ${sem.endDate}'),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(Icons.calendar_today, size: 16),
+                                    label: Text(sem.startDate, style: const TextStyle(fontSize: 12)),
+                                    onPressed: null,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    icon: const Icon(Icons.calendar_today, size: 16),
+                                    label: Text(sem.endDate, style: const TextStyle(fontSize: 12)),
+                                    onPressed: null,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
-                      )
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _showEditSemesterDialog(context, sem, semesterController),
+                      ),
                     ],
                   ),
                 );
@@ -61,6 +85,111 @@ class SemestersScreen extends StatelessWidget {
         },
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  void _showEditSemesterDialog(BuildContext context, Semester sem, SemesterController controller) {
+    final formKey = GlobalKey<FormState>();
+    final nameCtrl = TextEditingController(text: sem.name);
+    DateTime? startDate = DateFormat('yyyy-MM-dd').parse(sem.startDate);
+    DateTime? endDate = DateFormat('yyyy-MM-dd').parse(sem.endDate);
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Edit Semester'),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: nameCtrl,
+                      decoration: const InputDecoration(labelText: 'Semester Name'),
+                      validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.calendar_today, size: 16),
+                            label: Text(DateFormat('yyyy-MM-dd').format(startDate!), style: const TextStyle(fontSize: 12)),
+                            onPressed: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: startDate!,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2100),
+                              );
+                              if (date != null) {
+                                setState(() => startDate = date);
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.calendar_today, size: 16),
+                            label: Text(DateFormat('yyyy-MM-dd').format(endDate!), style: const TextStyle(fontSize: 12)),
+                            onPressed: () async {
+                              final date = await showDatePicker(
+                                context: context,
+                                initialDate: endDate!,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime(2100),
+                              );
+                              if (date != null) {
+                                setState(() => endDate = date);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (formKey.currentState!.validate()) {
+                      if (endDate!.isBefore(startDate!)) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('End date must be after start date')));
+                        return;
+                      }
+                      final updatedSem = Semester(
+                        id: sem.id,
+                        name: nameCtrl.text,
+                        startDate: DateFormat('yyyy-MM-dd').format(startDate!),
+                        endDate: DateFormat('yyyy-MM-dd').format(endDate!),
+                        minAttendanceReq: sem.minAttendanceReq,
+                      );
+                      final error = await controller.updateSemester(updatedSem);
+                      if (ctx.mounted) {
+                        if (error != null) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(error)));
+                        } else {
+                          Navigator.pop(ctx);
+                        }
+                      }
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      }
     );
   }
 }

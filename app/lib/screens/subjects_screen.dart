@@ -105,44 +105,102 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
     );
   }
 
-  void _showSubjectDetailsPopup(Subject subject) {
+
+  void _confirmDeleteSubject(BuildContext context, Subject subject) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).extension<AppColorScheme>()!.surface,
-          title: Text(subject.name),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (subject.teacher != null) ...[
-                Text('Teacher: ${subject.teacher}'),
-                const SizedBox(height: 8),
-              ],
-              Text('Target Attendance: ${subject.minAttendanceReq.toStringAsFixed(0)}%'),
-            ],
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Subject'),
+        content: const Text('This Deletes the Attendance Records, Time Slot etc. Are you sure?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final error = await Provider.of<SubjectController>(context, listen: false).removeSubject(subject.id!, subject.semId);
+              if (mounted && error != null) {
+                showErrorSnackBar(context, error);
+              }
+            },
+            child: const Text('Delete'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+        ],
+      ),
+    );
+  }
+
+  void _showEditSubjectModal(BuildContext context, Subject subject) {
+    final formKey = GlobalKey<FormState>();
+    final nameCtrl = TextEditingController(text: subject.name);
+    final teacherCtrl = TextEditingController(text: subject.teacher ?? '');
+    final reqCtrl = TextEditingController(text: subject.minAttendanceReq.toStringAsFixed(0));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).extension<AppColorScheme>()!.surface,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            top: 24, left: 16, right: 16,
+          ),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Edit Subject', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Subject Name'),
+                  validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: teacherCtrl,
+                  decoration: const InputDecoration(labelText: 'Teacher Name (Optional)'),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: reqCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Min Attendance %',
+                    suffixText: '%',
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (val) => val == null || val.isEmpty ? 'Required' : null,
+                ),
+                const SizedBox(height: 24),
+                PrimaryButton(
+                  text: 'Save Subject',
+                  onPressed: () async {
+                    if (formKey.currentState!.validate()) {
+                      final sub = Subject(
+                        id: subject.id,
+                        semId: subject.semId,
+                        name: nameCtrl.text,
+                        teacher: teacherCtrl.text.trim().isEmpty ? null : teacherCtrl.text.trim(),
+                        minAttendanceReq: double.tryParse(reqCtrl.text) ?? subject.minAttendanceReq,
+                      );
+                      final error = await Provider.of<SubjectController>(context, listen: false).updateSubject(sub);
+                      if (mounted) {
+                        if (error != null) {
+                          showErrorSnackBar(context, error);
+                        } else {
+                          Navigator.pop(context);
+                        }
+                      }
+                    }
+                  },
+                ),
+                const SizedBox(height: 24),
+              ],
             ),
-            PrimaryButton(
-              text: 'Delete',
-              isDestructive: true,
-              onPressed: () async {
-                final error = await Provider.of<SubjectController>(context, listen: false).removeSubject(subject.id!, subject.semId);
-                if (mounted) {
-                  if (error != null) {
-                    showErrorSnackBar(context, error);
-                  } else {
-                    Navigator.pop(context);
-                  }
-                }
-              },
-            ),
-          ],
+          ),
         );
       }
     );
@@ -166,14 +224,27 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               itemBuilder: (context, index) {
                 final sub = subjectController.subjects[index];
                 return CustomCard(
-                  onTap: () => _showSubjectDetailsPopup(sub),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Text(sub.name, style: Theme.of(context).textTheme.titleLarge),
-                      if (sub.teacher != null && sub.teacher!.isNotEmpty)
-                        Text('Teacher: ${sub.teacher}', style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary)),
-                      Text('Min: ${sub.minAttendanceReq.toStringAsFixed(0)}%', style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textMuted, fontSize: 12)),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(sub.name, style: Theme.of(context).textTheme.titleLarge),
+                            if (sub.teacher != null && sub.teacher!.isNotEmpty)
+                              Text('Teacher: ${sub.teacher}', style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary)),
+                            Text('Min: ${sub.minAttendanceReq.toStringAsFixed(0)}%', style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textMuted, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _showEditSubjectModal(context, sub),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _confirmDeleteSubject(context, sub),
+                      ),
                     ],
                   ),
                 );

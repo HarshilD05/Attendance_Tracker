@@ -20,13 +20,12 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 1,
       onConfigure: (db) async {
         // Required for ON DELETE CASCADE to work in SQLite.
         await db.execute('PRAGMA foreign_keys = ON');
       },
       onCreate: _createDB,
-      onUpgrade: _upgradeDB,
     );
   }
 
@@ -42,20 +41,6 @@ class DatabaseHelper {
       if (statement.trim().isNotEmpty) {
         await db.execute(statement);
       }
-    }
-  }
-
-  Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute(
-        'ALTER TABLE Semester ADD COLUMN min_attendance_req REAL NOT NULL DEFAULT 75.0',
-      );
-    }
-    if (oldVersion < 3) {
-      // Add a unique index to enforce the UNIQUE(sem_id, name) constraint on existing DBs
-      await db.execute(
-        'CREATE UNIQUE INDEX IF NOT EXISTS idx_subjects_sem_name ON Subjects(sem_id, name)',
-      );
     }
   }
 

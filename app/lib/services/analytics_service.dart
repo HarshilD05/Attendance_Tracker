@@ -112,15 +112,18 @@ class AnalyticsService {
     int totalAttended = 0;
     int totalConducted = 0;
     int totalAbsent = 0;
+    int totalUnmarked = 0;
     for (final s in subjectStats) {
       totalAttended += s.attended;
       totalConducted += s.total;
       totalAbsent += s.absent;
+      totalUnmarked += s.unmarked;
     }
     return AttendanceStats(
       attended: totalAttended,
       total: totalConducted,
       absent: totalAbsent,
+      unmarked: totalUnmarked,
     );
   }
 
@@ -158,6 +161,7 @@ class AnalyticsService {
         monthKey: key,
         monthLabel: labelFormat.format(dt),
         percentage: statsByMonth[key]!.percentage,
+        unmarkedPercentage: statsByMonth[key]!.unmarkedPercentage,
         isCurrent: key == currentMonthKey,
       );
     }).toList();

@@ -282,11 +282,20 @@ class _MonthlyBarChart extends StatelessWidget {
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 600),
                           curve: Curves.easeOutCubic,
-                          height: barHeight.clamp(4.0, barMaxHeight),
+                          height: ((d.unmarkedPercentage / 100) * barMaxHeight).clamp(0.0, barMaxHeight),
+                          decoration: BoxDecoration(
+                            color: colors.unmarked,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                          ),
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 600),
+                          curve: Curves.easeOutCubic,
+                          height: (d.percentage == 0 && d.unmarkedPercentage == 0) ? 4.0 : barHeight,
                           decoration: BoxDecoration(
                             color: barColor,
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(4),
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(d.unmarkedPercentage > 0 ? 0 : 4),
                             ),
                           ),
                         ),
