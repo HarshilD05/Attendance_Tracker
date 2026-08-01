@@ -9,6 +9,7 @@ import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import '../controllers/semester_controller.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/error_snackbar.dart';
+import '../widgets/success_snackbar.dart';
 import 'subjects_screen.dart';
 import 'holidays_screen.dart';
 import 'timetable_setup_screen.dart';
@@ -164,9 +165,7 @@ class SemesterDetailsScreen extends StatelessWidget {
         final resultPath = await FlutterFileDialog.saveFile(params: params);
 
         if (resultPath != null && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Semester exported successfully!')),
-          );
+          showSuccessSnackBar(context, 'Semester exported successfully!');
         }
       } else {
         // Desktop: show a native save-file dialog.
@@ -180,9 +179,7 @@ class SemesterDetailsScreen extends StatelessWidget {
           await xFile.saveTo(result.path);
 
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Saved: ${result.path}')),
-            );
+            showSuccessSnackBar(context, 'Saved: ${result.path}');
           }
         }
       }

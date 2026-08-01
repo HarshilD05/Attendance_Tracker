@@ -6,13 +6,13 @@ class SubjectRepo {
 
   Future<int> insertSubject(Subject subject) async {
     final db = await dbHelper.database;
-    return await db.insert('Subjects', subject.toMap());
+    return await db.insert('Subject', subject.toMap());
   }
 
   Future<List<Subject>> getSubjectsForSemester(int semId) async {
     final db = await dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      'Subjects',
+      'Subject',
       where: 'sem_id = ?',
       whereArgs: [semId],
     );
@@ -21,11 +21,11 @@ class SubjectRepo {
 
   Future<int> deleteSubject(int id) async {
     final db = await dbHelper.database;
-    return await db.delete('Subjects', where: 'id = ?', whereArgs: [id]);
+    return await db.delete('Subject', where: 'id = ?', whereArgs: [id]);
   }
 
   Future<int> updateSubject(Subject subject) async {
     final db = await dbHelper.database;
-    return await db.update('Subjects', subject.toMap(), where: 'id = ?', whereArgs: [subject.id]);
+    return await db.update('Subject', subject.toMap(), where: 'id = ?', whereArgs: [subject.id]);
   }
 }

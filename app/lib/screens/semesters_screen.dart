@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:provider/provider.dart';
 import '../controllers/semester_controller.dart';
 import '../widgets/custom_card.dart';
+import '../widgets/error_snackbar.dart';
+import '../widgets/success_snackbar.dart';
 import 'create_semester_screen.dart';
 import 'semester_details_screen.dart';
 import 'package:intl/intl.dart';
@@ -30,6 +33,7 @@ class SemestersScreen extends StatelessWidget {
                 final sem = semesters[index];
                 return CustomCard(
                   onTap: () {
+                    HapticFeedback.selectionClick();
                     semesterController.setActiveSemester(sem);
                     Navigator.push(
                       context,
@@ -163,9 +167,10 @@ class SemestersScreen extends StatelessWidget {
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
                       if (endDate!.isBefore(startDate!)) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('End date must be after start date')));
+                        showErrorSnackBar(context, 'End date must be after start date');
                         return;
                       }
+                      HapticFeedback.mediumImpact();
                       final updatedSem = Semester(
                         id: sem.id,
                         name: nameCtrl.text,
@@ -176,7 +181,7 @@ class SemestersScreen extends StatelessWidget {
                       final error = await controller.updateSemester(updatedSem);
                       if (ctx.mounted) {
                         if (error != null) {
-                          ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(error)));
+                          showErrorSnackBar(ctx, error);
                         } else {
                           Navigator.pop(ctx);
                         }

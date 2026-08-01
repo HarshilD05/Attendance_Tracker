@@ -6,13 +6,13 @@ class HolidayRepo {
 
   Future<int> insertHoliday(Holiday holiday) async {
     final db = await dbHelper.database;
-    return await db.insert('Holidays', holiday.toMap());
+    return await db.insert('Holiday', holiday.toMap());
   }
 
   Future<List<Holiday>> getHolidaysForSemester(int semId) async {
     final db = await dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      'Holidays',
+      'Holiday',
       where: 'sem_id = ?',
       whereArgs: [semId],
     );
@@ -21,6 +21,6 @@ class HolidayRepo {
 
   Future<int> deleteHoliday(int holidayId) async {
     final db = await dbHelper.database;
-    return await db.delete('Holidays', where: 'id = ?', whereArgs: [holidayId]);
+    return await db.delete('Holiday', where: 'id = ?', whereArgs: [holidayId]);
   }
 }

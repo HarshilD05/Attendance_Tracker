@@ -6,6 +6,7 @@ import '../controllers/semester_controller.dart';
 import '../models/semester.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/error_snackbar.dart';
+import '../widgets/success_snackbar.dart';
 import 'semester_details_screen.dart';
 
 class CreateSemesterScreen extends StatefulWidget {
@@ -43,6 +44,7 @@ class _CreateSemesterScreenState extends State<CreateSemesterScreen> {
         if (error != null) {
           showErrorSnackBar(context, error);
         } else {
+          showSuccessSnackBar(context, 'Semester created successfully!');
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(builder: (_) => const SemesterDetailsScreen()),
@@ -164,11 +166,7 @@ class _CreateSemesterScreenState extends State<CreateSemesterScreen> {
           if (error != null) {
             showErrorSnackBar(context, error);
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Semester imported successfully!'),
-              ),
-            );
+            showSuccessSnackBar(context, 'Semester imported successfully!');
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const SemesterDetailsScreen()),

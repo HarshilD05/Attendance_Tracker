@@ -6,7 +6,10 @@ class TimetableSlotRepo {
 
   Future<int> insertTimetable(TimetableSlot timetable) async {
     final db = await dbHelper.database;
-    return await db.insert('TimetableSlot', timetable.toMap());
+    final map = timetable.toMap();
+    map.remove('extra_lec_id');
+    map.remove('specific_date');
+    return await db.insert('TimetableSlot', map);
   }
 
   Future<List<TimetableSlot>> getTimetableForDay(int semId, int dayOfWeek) async {

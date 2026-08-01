@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../controllers/semester_controller.dart';
 import '../controllers/subject_controller.dart';
@@ -79,6 +80,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
                   text: 'Save Subject',
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
+                      HapticFeedback.mediumImpact();
                       final sub = Subject(
                         semId: semId,
                         name: nameCtrl.text,
@@ -118,6 +120,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
               Navigator.pop(ctx);
+              HapticFeedback.heavyImpact();
               final error = await Provider.of<SubjectController>(context, listen: false).removeSubject(subject.id!, subject.semId);
               if (mounted && error != null) {
                 showErrorSnackBar(context, error);
@@ -179,6 +182,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
                   text: 'Save Subject',
                   onPressed: () async {
                     if (formKey.currentState!.validate()) {
+                      HapticFeedback.mediumImpact();
                       final sub = Subject(
                         id: subject.id,
                         semId: subject.semId,
@@ -239,11 +243,17 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.edit),
-                        onPressed: () => _showEditSubjectModal(context, sub),
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          _showEditSubjectModal(context, sub);
+                        },
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _confirmDeleteSubject(context, sub),
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          _confirmDeleteSubject(context, sub);
+                        },
                       ),
                     ],
                   ),

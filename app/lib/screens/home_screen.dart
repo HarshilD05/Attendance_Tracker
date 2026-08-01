@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -8,7 +9,10 @@ import '../controllers/subject_controller.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/error_snackbar.dart';
 import '../widgets/dashed_circle_painter.dart';
+import '../widgets/add_slot_modal.dart';
+import '../widgets/home_slot_card.dart';
 import '../config/theme.dart';
+import '../models/timetable_slot.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -138,6 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         }
                       ),
                       onDaySelected: (newSelectedDay, newFocusedDay) {
+                        HapticFeedback.selectionClick();
                         setState(() {
                           selectedDay = newSelectedDay;
                           focusedDay = newFocusedDay;
@@ -163,14 +168,21 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _markAttendance(int semId, int subId, int? slotId, int isCancelled, String studentStatus, AttendanceController ac) async {
-    final error = await ac.markAttendance(semId, subId, slotId, isCancelled, studentStatus);
+  void _markAttendance(int semId, TimetableSlot slot, int isCancelled, String studentStatus, AttendanceController ac) async {
+    // Unmarking (toggle off) → light; Marking present/absent → medium
+    if (studentStatus == 'U') {
+      HapticFeedback.lightImpact();
+    } else {
+      HapticFeedback.mediumImpact();
+    }
+    final error = await ac.markAttendance(semId, slot, isCancelled, studentStatus);
     if (error != null && mounted) {
       showErrorSnackBar(context, error);
     }
   }
 
   void _markAll(int semId, String studentStatus, AttendanceController ac) async {
+    HapticFeedback.mediumImpact();
     final error = await ac.markAllAttendance(semId, ac.todaysSchedule, studentStatus);
     if (error != null && mounted) {
       showErrorSnackBar(context, error);
@@ -200,7 +212,23 @@ class _HomeScreenState extends State<HomeScreen> {
       _loadedSemId = activeSem.id;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          ac.setSelectedDate(ac.selectedDate, activeSem.id!);
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final format = DateFormat('yyyy-MM-dd');
+          DateTime targetDate = ac.selectedDate;
+
+          try {
+            final start = format.parse(activeSem.startDate);
+            final end = format.parse(activeSem.endDate);
+            if ((today.isAfter(start) || today.isAtSameMomentAs(start)) && 
+                (today.isBefore(end) || today.isAtSameMomentAs(end))) {
+              targetDate = today;
+            } else {
+              targetDate = start;
+            }
+          } catch (_) {}
+
+          ac.setSelectedDate(targetDate, activeSem.id!);
           sc.loadSubjectsForSemester(activeSem.id!);
           ac.backfillUnmarked(activeSem).then((_) {
             if (mounted) {
@@ -214,8 +242,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (activeSem == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Home')),
-        body: const Center(child: Text('No active semester. Please select or create one from the Semesters tab.')),
+        appBar: AppBar(
+          title: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              hint: const Text('Select Semester'),
+              value: null,
+              items: semesterController.semesters.map((s) => DropdownMenuItem(
+                value: s.id, 
+                child: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+              )).toList(),
+              onChanged: (id) {
+                if (id != null) {
+                  final selected = semesterController.semesters.firstWhere((s) => s.id == id);
+                  semesterController.setActiveSemester(selected);
+                }
+              },
+            ),
+          ),
+        ),
+        body: const Center(child: Text('No active semester. Please select a semester. \nOR create one from the Semesters tab.')),
       );
     }
 
@@ -228,29 +273,53 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
+        toolbarHeight: 90,
+        title: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(
-              icon: const Icon(Icons.chevron_left),
-              onPressed: () {
-                final format = DateFormat('yyyy-MM-dd');
-                final semStart = format.parse(activeSem.startDate);
-                final newDate = ac.selectedDate.subtract(const Duration(days: 1));
-                if (newDate.isBefore(semStart)) return;
-                ac.setSelectedDate(newDate, activeSem.id!);
-              },
+            DropdownButtonHideUnderline(
+              child: DropdownButton<int>(
+                value: activeSem.id,
+                isDense: true,
+                items: semesterController.semesters.map((s) => DropdownMenuItem(
+                  value: s.id, 
+                  child: Text(s.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                )).toList(),
+                onChanged: (id) {
+                  if (id != null) {
+                    final selected = semesterController.semesters.firstWhere((s) => s.id == id);
+                    semesterController.setActiveSemester(selected);
+                  }
+                },
+              ),
             ),
-            Text(displayDate),
-            IconButton(
-              icon: const Icon(Icons.chevron_right),
-              onPressed: () {
-                final format = DateFormat('yyyy-MM-dd');
-                final semEnd = format.parse(activeSem.endDate);
-                final newDate = ac.selectedDate.add(const Duration(days: 1));
-                if (newDate.isAfter(semEnd)) return;
-                ac.setSelectedDate(newDate, activeSem.id!);
-              },
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () {
+                    final format = DateFormat('yyyy-MM-dd');
+                    final semStart = format.parse(activeSem.startDate);
+                    final newDate = ac.selectedDate.subtract(const Duration(days: 1));
+                    if (newDate.isBefore(semStart)) return;
+                    HapticFeedback.selectionClick();
+                    ac.setSelectedDate(newDate, activeSem.id!);
+                  },
+                ),
+                Text(displayDate, style: const TextStyle(fontSize: 16)),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed: () {
+                    final format = DateFormat('yyyy-MM-dd');
+                    final semEnd = format.parse(activeSem.endDate);
+                    final newDate = ac.selectedDate.add(const Duration(days: 1));
+                    if (newDate.isAfter(semEnd)) return;
+                    HapticFeedback.selectionClick();
+                    ac.setSelectedDate(newDate, activeSem.id!);
+                  },
+                ),
+              ],
             ),
           ],
         ),
@@ -261,9 +330,25 @@ class _HomeScreenState extends State<HomeScreen> {
           )
         ],
       ),
-      body: ac.todaysSchedule.isEmpty
-          ? const Center(child: Text('No classes scheduled for today.'))
-          : Column(
+      body: ac.isHoliday
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.beach_access_rounded, size: 80, color: Theme.of(context).extension<AppColorScheme>()!.primary.withOpacity(0.8)),
+                  const SizedBox(height: 16),
+                  Text('Holiday!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).extension<AppColorScheme>()!.textPrimary)),
+                  if (ac.currentHoliday?.name.isNotEmpty == true)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(ac.currentHoliday!.name, style: TextStyle(fontSize: 16, color: Theme.of(context).extension<AppColorScheme>()!.textMuted)),
+                    ),
+                ],
+              ),
+            )
+          : ac.todaysSchedule.isEmpty
+              ? const Center(child: Text('No classes scheduled for today.'))
+              : Column(
               children: [
                 // ── All Present / All Absent quick bar ──────────────────────
                 Padding(
@@ -313,101 +398,55 @@ class _HomeScreenState extends State<HomeScreen> {
                       final isAbsent = existingAttendance?.studentStatus == 'A';
                       final isCancelled = existingAttendance?.isCancelled == 1;
 
-                      return Dismissible(
-                        key: ValueKey('${slot.slotId}_${ac.selectedDate.toIso8601String()}'),
-                        direction: DismissDirection.horizontal,
-                        confirmDismiss: (direction) async {
-                          final newStatus = isCancelled ? 0 : 1;
-                          final currStudentStatus = existingAttendance?.studentStatus ?? 'U';
-                          _markAttendance(activeSem.id!, slot.subId, slot.slotId, newStatus, currStudentStatus, ac);
-                          return false; // Toggle, don't dismiss
+                      return HomeSlotCard(
+                        slot: slot,
+                        subName: subName,
+                        displayTime: displayTime,
+                        existingAttendance: existingAttendance,
+                        selectedDateIso: ac.selectedDate.toIso8601String(),
+                        onRemoveExtra: () async {
+                          final error = await ac.removeExtraLec(activeSem.id!, slot.extraLecId!);
+                          if (error != null && mounted) {
+                            showErrorSnackBar(context, error);
+                          }
                         },
-                        background: Container(
-                          alignment: Alignment.centerLeft,
-                          padding: const EdgeInsets.only(left: 20),
-                          color: Colors.red,
-                          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                          child: Icon(isCancelled ? Icons.restore : Icons.cancel, color: Colors.white),
-                        ),
-                        secondaryBackground: Container(
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 20),
-                          color: Colors.red,
-                          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                          child: Icon(isCancelled ? Icons.restore : Icons.cancel, color: Colors.white),
-                        ),
-                        child: CustomCard(
-                          borderColor: isCancelled ? Colors.red : null,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(subName, style: Theme.of(context).textTheme.titleLarge),
-                                  if (isCancelled)
-                                    const Text(
-                                      'CANCELLED',
-                                      style: TextStyle(
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        letterSpacing: 1.2,
-                                      ),
-                                    )
-                                  else if (slot.classRoom.isNotEmpty)
-                                    Chip(label: Text(slot.classRoom, style: const TextStyle(fontSize: 12))),
-                                ],
-                              ),
-                             if (displayTime.isNotEmpty)
-                              Text(displayTime, style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary)),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: isPresent
-                                            ? Theme.of(context).extension<AppColorScheme>()!.present
-                                            : Theme.of(context).extension<AppColorScheme>()!.surface,
-                                        foregroundColor: isPresent ? Colors.white : Theme.of(context).extension<AppColorScheme>()!.textSecondary,
-                                        side: BorderSide(
-                                            color: isPresent
-                                                ? Theme.of(context).extension<AppColorScheme>()!.present
-                                                : Theme.of(context).extension<AppColorScheme>()!.textMuted.withOpacity(0.2)),
-                                      ),
-                                      onPressed: () => _markAttendance(activeSem.id!, slot.subId, slot.slotId, 0, isPresent ? 'U' : 'P', ac),
-                                      child: const Text('Present'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: isAbsent
-                                            ? Theme.of(context).extension<AppColorScheme>()!.absent
-                                            : Theme.of(context).extension<AppColorScheme>()!.surface,
-                                        foregroundColor: isAbsent ? Colors.white : Theme.of(context).extension<AppColorScheme>()!.textSecondary,
-                                        side: BorderSide(
-                                            color: isAbsent
-                                                ? Theme.of(context).extension<AppColorScheme>()!.absent
-                                                : Theme.of(context).extension<AppColorScheme>()!.textMuted.withOpacity(0.2)),
-                                      ),
-                                      onPressed: () => _markAttendance(activeSem.id!, slot.subId, slot.slotId, 0, isAbsent ? 'U' : 'A', ac),
-                                      child: const Text('Absent'),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            ],
-                          ),
-                        ),
+                        onMarkAttendance: (int newStatus, String studentStatus) {
+                          _markAttendance(activeSem.id!, slot, newStatus, studentStatus, ac);
+                        },
                       );
                     },
                   ),
                 ),
               ],
             ),
+      floatingActionButton: 
+        ac.isHoliday ? null : 
+        SizedBox(
+          width: MediaQuery.of(context).size.width * 0.5,
+          child: FloatingActionButton.extended(
+            onPressed: () {
+              if (sc.subjects.isEmpty) {
+                showErrorSnackBar(context, 'Please add subjects first!');
+                return;
+              }
+              HapticFeedback.mediumImpact();
+              showAddSlotModal(
+                context: context,
+                semId: activeSem.id!,
+                dayOfWeek: 0,
+                subjects: sc.subjects,
+                existingSlots: ac.todaysSchedule,
+                specificDate: DateFormat('yyyy-MM-dd').format(ac.selectedDate),
+                onSave: (slot) => ac.addExtraLec(activeSem.id!, slot),
+              );
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Extra Lec'),
+            backgroundColor: Theme.of(context).extension<AppColorScheme>()!.primary,
+            foregroundColor: Colors.white,
+          ),
+        ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 }

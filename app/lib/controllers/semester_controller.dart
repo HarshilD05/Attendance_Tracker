@@ -46,7 +46,7 @@ class SemesterController with ChangeNotifier {
             // ignore parsing errors and continue
           }
         }
-        _activeSemester = matchedSemester ?? _semesters.last;
+        _activeSemester = matchedSemester;
       }
       _isLoading = false;
       notifyListeners();

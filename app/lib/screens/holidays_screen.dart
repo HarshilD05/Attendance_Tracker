@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
@@ -73,6 +74,7 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
                 text: 'Remove Holiday',
                 isDestructive: true,
                 onPressed: () async {
+                  HapticFeedback.heavyImpact();
                   final error = await Provider.of<HolidayController>(context, listen: false).removeHoliday(existingHoliday.id!, semId);
                   if (mounted) {
                     if (error != null) {
@@ -108,6 +110,7 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
               PrimaryButton(
                 text: 'Add as Holiday',
                 onPressed: () async {
+                  HapticFeedback.mediumImpact();
                   final newHol = Holiday(semId: semId, date: dateStr, name: nameCtrl.text.isEmpty ? 'Holiday' : nameCtrl.text);
                   final error = await Provider.of<HolidayController>(context, listen: false).addHoliday(newHol);
                   if (mounted) {
@@ -209,6 +212,7 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
               return [];
             },
             onDaySelected: (selectedDay, focusedDay) {
+              HapticFeedback.selectionClick();
               setState(() => _focusedDay = focusedDay);
               final dateStr = format.format(selectedDay);
               final existingHol = holidayDates[dateStr];

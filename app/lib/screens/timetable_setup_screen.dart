@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../controllers/semester_controller.dart';
@@ -6,7 +7,8 @@ import '../controllers/timetable_controller.dart';
 import '../controllers/subject_controller.dart';
 import '../models/timetable_slot.dart';
 import '../models/subject.dart';
-import '../widgets/custom_card.dart';
+import '../widgets/add_slot_modal.dart';
+import '../widgets/timetable_setup_card.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/error_snackbar.dart';
 import '../config/theme.dart';
@@ -62,152 +64,17 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please add Subjects first!')));
       return;
     }
-
-    final formKey = GlobalKey<FormState>();
-    final classroomCtrl = TextEditingController();
-    Subject? selectedSubject = subjects.first;
-    
     final tc = Provider.of<TimetableController>(context, listen: false);
-    TimeOfDay startTime = const TimeOfDay(hour: 8, minute: 0);
-    
-    if (tc.slots.isNotEmpty) {
-      TimeOfDay maxEndTime = const TimeOfDay(hour: 0, minute: 0);
-      for (var slot in tc.slots) {
-        final parts = slot.endTime.split(':');
-        if (parts.length == 2) {
-          final h = int.tryParse(parts[0]) ?? 0;
-          final m = int.tryParse(parts[1]) ?? 0;
-          if (h > maxEndTime.hour || (h == maxEndTime.hour && m > maxEndTime.minute)) {
-            maxEndTime = TimeOfDay(hour: h, minute: m);
-          }
-        }
-      }
-      if (maxEndTime.hour != 0 || maxEndTime.minute != 0) {
-        startTime = maxEndTime;
-      }
-    }
-    
-    TimeOfDay endTime = TimeOfDay(hour: (startTime.hour + 1) % 24, minute: startTime.minute);
-
-    showModalBottomSheet(
+    showAddSlotModal(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).extension<AppColorScheme>()!.surface,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            
-            Future<void> pickTime(bool isStart) async {
-              final time = await showTimePicker(
-                context: context,
-                initialTime: isStart ? startTime : endTime,
-              );
-              if (time != null) {
-                setModalState(() {
-                  if (isStart) {
-                    startTime = time;
-                    endTime = TimeOfDay(hour: (time.hour + 1) % 24, minute: time.minute);
-                  } else {
-                    endTime = time;
-                  }
-                });
-              }
-            }
-
-            // Helper to format TimeOfDay to HH:mm string (24 hour format for sorting/db)
-            String formatTimeOfDay(TimeOfDay tod) {
-              final now = DateTime.now();
-              final dt = DateTime(now.year, now.month, now.day, tod.hour, tod.minute);
-              return DateFormat('HH:mm').format(dt);
-            }
-            
-            // Helper for display (12 hour)
-            String displayTimeOfDay(TimeOfDay tod) {
-              final now = DateTime.now();
-              final dt = DateTime(now.year, now.month, now.day, tod.hour, tod.minute);
-              return DateFormat.jm().format(dt);
-            }
-
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-                top: 24, left: 16, right: 16,
-              ),
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('Add Timetable Slot', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<Subject>(
-                      value: selectedSubject,
-                      decoration: const InputDecoration(labelText: 'Subject'),
-                      items: subjects.map((sub) {
-                        return DropdownMenuItem(value: sub, child: Text(sub.name));
-                      }).toList(),
-                      onChanged: (val) => setModalState(() => selectedSubject = val),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.access_time),
-                            label: Text(displayTimeOfDay(startTime)),
-                            onPressed: () => pickTime(true),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.access_time),
-                            label: Text(displayTimeOfDay(endTime)),
-                            onPressed: () => pickTime(false),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: classroomCtrl,
-                      decoration: const InputDecoration(labelText: 'Classroom (Optional)'),
-                    ),
-                    const SizedBox(height: 24),
-                    PrimaryButton(
-                      text: 'Save Slot',
-                      onPressed: () async {
-                        final slot = TimetableSlot(
-                          semId: semId,
-                          subId: selectedSubject!.id!,
-                          dayOfWeek: dayOfWeek,
-                          startTime: formatTimeOfDay(startTime),
-                          endTime: formatTimeOfDay(endTime),
-                          classRoom: classroomCtrl.text,
-                        );
-
-                        final tc = Provider.of<TimetableController>(context, listen: false);
-                        final error = await tc.addSlot(slot);
-                        
-                        if (mounted) {
-                          // Always close the sheet first so the snackbar
-                          // is not blocked behind the bottom sheet overlay.
-                          Navigator.pop(context);
-                          if (error != null) {
-                            showErrorSnackBar(this.context, error);
-                          }
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            );
-          }
-        );
-      }
+      semId: semId,
+      dayOfWeek: dayOfWeek,
+      subjects: subjects,
+      existingSlots: tc.slots,
+      onSave: (slot) async {
+        final error = await tc.addSlot(slot);
+        return error;
+      },
     );
   }
 
@@ -235,6 +102,7 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
               text: 'Remove Slot',
               isDestructive: true,
               onPressed: () async {
+                HapticFeedback.heavyImpact();
                 final error = await Provider.of<TimetableController>(context, listen: false).removeSlot(slot.slotId!, slot.semId);
                 if (mounted) {
                   if (error != null) {
@@ -298,23 +166,14 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
                 displayTime = '${slot.startTime} - ${slot.endTime}';
               }
 
-              return CustomCard(
-                onTap: () => _showSlotDetails(slot, subName),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(subName, style: Theme.of(context).textTheme.titleLarge),
-                        const SizedBox(height: 4),
-                        Text(displayTime, style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary)),
-                      ],
-                    ),
-                    if (slot.classRoom.isNotEmpty)
-                      Chip(label: Text(slot.classRoom, style: const TextStyle(fontSize: 12))),
-                  ],
-                ),
+              return TimetableSetupCard(
+                slot: slot,
+                subName: subName,
+                displayTime: displayTime,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  _showSlotDetails(slot, subName);
+                },
               );
             },
           );

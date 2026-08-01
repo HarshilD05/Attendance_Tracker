@@ -21,6 +21,7 @@ class AnalyticsController with ChangeNotifier {
   // --- Overall Tab ---
   AttendanceCardData? _overallCard;
   List<SubjectAnalyticsData> _subjectCards = [];
+  List<MonthlyBarData> _overallBarData = [];
 
   // --- Subject Tab ---
   AttendanceCardData? _selectedSubjectCard;
@@ -37,6 +38,7 @@ class AnalyticsController with ChangeNotifier {
   String? get error => _error;
   AttendanceCardData? get overallCard => _overallCard;
   List<SubjectAnalyticsData> get subjectCards => _subjectCards;
+  List<MonthlyBarData> get overallBarData => _overallBarData;
   AttendanceCardData? get selectedSubjectCard => _selectedSubjectCard;
   List<MonthlyBarData> get subjectBarData => _subjectBarData;
   List<({String key, String label})> get availableMonths => _availableMonths;
@@ -95,10 +97,18 @@ class AnalyticsController with ChangeNotifier {
         remaining: totalRemaining,
       );
 
+      // Build overall monthly bar data
+      final overallStatsByMonth = await _analyticsRepo.getStatsByMonth(semester.id!);
+      _overallBarData = AnalyticsService.buildBarData(overallStatsByMonth);
+
       // Also set up available months for monthly tab
       _availableMonths = AnalyticsService.getMonthsInSemester(semester.startDate, semester.endDate);
-      if (_selectedMonthKey == null && _availableMonths.isNotEmpty) {
-        _selectedMonthKey = _availableMonths.last.key;
+      if (_availableMonths.isNotEmpty) {
+        if (_selectedMonthKey == null || !_availableMonths.any((m) => m.key == _selectedMonthKey)) {
+          _selectedMonthKey = _availableMonths.last.key;
+        }
+      } else {
+        _selectedMonthKey = null;
       }
 
       _error = null;

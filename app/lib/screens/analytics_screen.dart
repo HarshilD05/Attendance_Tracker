@@ -109,6 +109,26 @@ class _OverallTab extends StatelessWidget {
           const SizedBox(height: 8),
           AttendanceCard(data: ac.overallCard!),
           const SizedBox(height: 16),
+          if (ac.overallBarData.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              child: Text(
+                'MONTHLY ATTENDANCE',
+                style: TextStyle(
+                  fontSize: 11,
+                  letterSpacing: 1.2,
+                  color: Theme.of(context).extension<AppColorScheme>()!.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _MonthlyBarChart(
+              data: ac.overallBarData,
+              minReq: sem.minAttendanceReq,
+            ),
+            const SizedBox(height: 16),
+          ],
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Text(
