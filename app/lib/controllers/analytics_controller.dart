@@ -4,7 +4,6 @@ import '../models/analytics_data.dart';
 import '../models/semester.dart';
 import '../models/subject.dart';
 import '../models/timetable_slot.dart';
-import '../models/holiday.dart';
 import '../repositories/analytics_repo.dart';
 import '../repositories/timetable_slot_repo.dart';
 import '../repositories/holiday_repo.dart';

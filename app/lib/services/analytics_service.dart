@@ -1,7 +1,5 @@
 import 'package:intl/intl.dart';
 import '../models/analytics_data.dart';
-import '../models/semester.dart';
-import '../models/subject.dart';
 import '../models/timetable_slot.dart';
 import '../models/holiday.dart';
 

@@ -6,6 +6,8 @@ import '../repositories/semester_repo.dart';
 import '../repositories/holiday_repo.dart';
 import '../repositories/subject_repo.dart';
 import '../repositories/timetable_slot_repo.dart';
+import '../repositories/attendance_repo.dart';
+import '../repositories/extra_lec_repo.dart';
 import '../models/semester_export.dart';
 import '../models/subject.dart';
 import '../models/timetable_slot.dart';
@@ -13,6 +15,8 @@ import '../models/timetable_slot.dart';
 class SemesterController with ChangeNotifier {
   final SemesterRepo _semesterRepo = SemesterRepo();
   final HolidayRepo _holidayRepo = HolidayRepo();
+  final AttendanceRepo _attendanceRepo = AttendanceRepo();
+  final ExtraLecRepo _extraLecRepo = ExtraLecRepo();
 
   List<Semester> _semesters = [];
   Semester? _activeSemester;
@@ -107,6 +111,13 @@ class SemesterController with ChangeNotifier {
     }
     try {
       await _semesterRepo.updateSemester(semester);
+      // Prune records that fall outside the new date range
+      if (semester.id != null) {
+        await _attendanceRepo.deleteRecordsOutsideRange(
+            semester.id!, semester.startDate, semester.endDate);
+        await _extraLecRepo.deleteExtraLecsOutsideRange(
+            semester.id!, semester.startDate, semester.endDate);
+      }
       await loadSemesters();
       if (_activeSemester?.id == semester.id) {
         _activeSemester = _semesters.firstWhere((s) => s.id == semester.id);

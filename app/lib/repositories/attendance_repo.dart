@@ -40,4 +40,15 @@ class AttendanceRepo {
       whereArgs: [id],
     );
   }
+
+  /// Remove all attendance records for [semId] that fall outside [startDate]..[endDate].
+  Future<int> deleteRecordsOutsideRange(int semId, String startDate, String endDate) async {
+    final db = await dbHelper.database;
+    return await db.delete(
+      'Attendance',
+      where: 'sem_id = ? AND (date < ? OR date > ?)',
+      whereArgs: [semId, startDate, endDate],
+    );
+  }
 }
+

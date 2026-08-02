@@ -24,4 +24,15 @@ class ExtraLecRepo {
     final db = await dbHelper.database;
     return await db.delete('ExtraLec', where: 'id = ?', whereArgs: [id]);
   }
+
+  /// Remove all extra lectures for [semId] that fall outside [startDate]..[endDate].
+  Future<int> deleteExtraLecsOutsideRange(int semId, String startDate, String endDate) async {
+    final db = await dbHelper.database;
+    return await db.delete(
+      'ExtraLec',
+      where: 'sem_id = ? AND (date < ? OR date > ?)',
+      whereArgs: [semId, startDate, endDate],
+    );
+  }
 }
+

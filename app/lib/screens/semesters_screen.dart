@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
-import 'package:file_selector/file_selector.dart';
 import 'package:provider/provider.dart';
 import '../controllers/semester_controller.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/error_snackbar.dart';
-import '../widgets/success_snackbar.dart';
 import 'create_semester_screen.dart';
 import 'semester_details_screen.dart';
 import 'package:intl/intl.dart';
@@ -28,6 +24,7 @@ class SemestersScreen extends StatelessWidget {
       body: semesters.isEmpty
           ? const Center(child: Text('No semesters found. Create one!'))
           : ListView.builder(
+              padding: const EdgeInsets.only(bottom: 84),
               itemCount: semesters.length,
               itemBuilder: (context, index) {
                 final sem = semesters[index];

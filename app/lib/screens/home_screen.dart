@@ -324,10 +324,32 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            onPressed: () => _pickDate(context, activeSem.id!, ac),
-          )
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.calendar_today),
+                  onPressed: () => _pickDate(context, activeSem.id!, ac),
+                ),
+                if (ac.unmarkedDates.isNotEmpty)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: SizedBox(
+                      width: 34,
+                      height: 34,
+                      child: CustomPaint(
+                        painter: DashedCirclePainter(
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ],
       ),
       body: ac.isHoliday
@@ -378,6 +400,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // ── Slot list ───────────────────────────────────────────────
                 Expanded(
                   child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 84),
                     itemCount: ac.todaysSchedule.length,
                     itemBuilder: (context, index) {
                       final slot = ac.todaysSchedule[index];
@@ -394,9 +417,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       }
 
                       final existingAttendance = attendanceMap[slot.slotId];
-                      final isPresent = existingAttendance?.studentStatus == 'P';
-                      final isAbsent = existingAttendance?.studentStatus == 'A';
-                      final isCancelled = existingAttendance?.isCancelled == 1;
 
                       return HomeSlotCard(
                         slot: slot,
@@ -422,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
       floatingActionButton: 
         ac.isHoliday ? null : 
         SizedBox(
-          width: MediaQuery.of(context).size.width * 0.5,
+          width: MediaQuery.of(context).size.width * 0.3,
           child: FloatingActionButton.extended(
             onPressed: () {
               if (sc.subjects.isEmpty) {

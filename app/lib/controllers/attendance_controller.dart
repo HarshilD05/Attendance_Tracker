@@ -9,6 +9,7 @@ import '../repositories/holiday_repo.dart';
 import '../models/holiday.dart';
 import '../repositories/extra_lec_repo.dart';
 import '../models/extra_lec.dart';
+import '../services/notification_service.dart';
 
 class AttendanceController with ChangeNotifier {
   final TimetableSlotRepo _timetableRepo = TimetableSlotRepo();
@@ -74,10 +75,62 @@ class AttendanceController with ChangeNotifier {
       _todaysAttendance = await _attendanceRepo.getAttendanceForDate(semId, dateStr);
       
       notifyListeners();
+      _updateReminder();
       return null;
     } catch (e) {
       debugPrint("Error : $e");
       return 'Failed to load schedule.';
+    }
+  }
+
+  /// Schedules or cancels today's attendance reminder based on current state.
+  void _updateReminder() {
+    final now = DateTime.now();
+    final todayStr = DateFormat('yyyy-MM-dd').format(now);
+    final selectedStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+    // Only act on today's data
+    if (selectedStr != todayStr) return;
+
+    // Cancel if holiday
+    if (_isHoliday) {
+      NotificationService().cancelAttendanceReminder();
+      return;
+    }
+
+    // Cancel if no schedule at all
+    if (_todaysSchedule.isEmpty) {
+      NotificationService().cancelAttendanceReminder();
+      return;
+    }
+
+    // Cancel if all slots already marked (none are 'U')
+    final hasUnmarked = _todaysAttendance.any((a) => a.studentStatus == 'U');
+    // Also consider slots without any attendance record yet as unmarked
+    final allSlotIds = _todaysSchedule
+        .map((s) => s.isExtraLec ? s.extraLecId : s.slotId)
+        .toSet();
+    final markedIds = _todaysAttendance.map((a) {
+      return a.slotId ?? a.extraLecId;
+    }).toSet();
+    final anyUnrecorded = allSlotIds.any((id) => !markedIds.contains(id));
+
+    if (!hasUnmarked && !anyUnrecorded) {
+      NotificationService().cancelAttendanceReminder();
+      return;
+    }
+
+    // Schedule reminder 30 min after the last lecture ends
+    final lastSlot = _todaysSchedule.last;
+    try {
+      final endTime = DateFormat('HH:mm').parse(lastSlot.endTime);
+      final todayDate = DateTime(now.year, now.month, now.day);
+      final lastLecEnd = todayDate
+          .add(Duration(hours: endTime.hour, minutes: endTime.minute));
+      final reminderTime = lastLecEnd.add(const Duration(minutes: 30));
+      NotificationService().scheduleAttendanceReminder(reminderTime);
+    } catch (e) {
+      debugPrint('[AttendanceController] Reminder scheduling error: $e');
     }
   }
 

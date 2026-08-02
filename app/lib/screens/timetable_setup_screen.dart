@@ -20,7 +20,8 @@ class TimetableSetupScreen extends StatefulWidget {
   State<TimetableSetupScreen> createState() => _TimetableSetupScreenState();
 }
 
-class _TimetableSetupScreenState extends State<TimetableSetupScreen> with SingleTickerProviderStateMixin {
+class _TimetableSetupScreenState extends State<TimetableSetupScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final List<String> _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -28,29 +29,26 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
   void initState() {
     super.initState();
     _tabController = TabController(length: 6, vsync: this);
+    // Update selectedDayOfWeek when tab changes (in-memory only, no DB call)
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
-        _loadSlotsForSelectedTab();
+        Provider.of<TimetableController>(context, listen: false)
+            .setSelectedDay(_tabController.index + 1);
       }
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final activeSem = Provider.of<SemesterController>(context, listen: false).activeSemester;
+      final activeSem =
+          Provider.of<SemesterController>(context, listen: false).activeSemester;
       if (activeSem != null) {
         // Load subjects for the dropdown
-        Provider.of<SubjectController>(context, listen: false).loadSubjectsForSemester(activeSem.id!);
-        // Load initial timetable for Monday (dayOfWeek = 1)
-        Provider.of<TimetableController>(context, listen: false).setSelectedDay(1, activeSem.id!);
+        Provider.of<SubjectController>(context, listen: false)
+            .loadSubjectsForSemester(activeSem.id!);
+        // Preload ALL days at once
+        Provider.of<TimetableController>(context, listen: false)
+            .loadAllTimetable(activeSem.id!);
       }
     });
-  }
-  
-  void _loadSlotsForSelectedTab() {
-    final activeSem = Provider.of<SemesterController>(context, listen: false).activeSemester;
-    if (activeSem != null) {
-      final dayOfWeek = _tabController.index + 1; // 1=Mon, 6=Sat
-      Provider.of<TimetableController>(context, listen: false).setSelectedDay(dayOfWeek, activeSem.id!);
-    }
   }
 
   @override
@@ -61,7 +59,8 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
 
   void _showAddSlotModal(int semId, int dayOfWeek, List<Subject> subjects) {
     if (subjects.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please add Subjects first!')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Please add Subjects first!')));
       return;
     }
     final tc = Provider.of<TimetableController>(context, listen: false);
@@ -70,7 +69,7 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
       semId: semId,
       dayOfWeek: dayOfWeek,
       subjects: subjects,
-      existingSlots: tc.slots,
+      existingSlots: tc.slotsByDay[dayOfWeek] ?? [],
       onSave: (slot) async {
         final error = await tc.addSlot(slot);
         return error;
@@ -83,7 +82,8 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Theme.of(context).extension<AppColorScheme>()!.surface,
+          backgroundColor:
+              Theme.of(context).extension<AppColorScheme>()!.surface,
           title: Text(subjectName),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -103,7 +103,10 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
               isDestructive: true,
               onPressed: () async {
                 HapticFeedback.heavyImpact();
-                final error = await Provider.of<TimetableController>(context, listen: false).removeSlot(slot.slotId!, slot.semId);
+                final error = await Provider.of<TimetableController>(
+                        context,
+                        listen: false)
+                    .removeSlot(slot.slotId!, slot.semId);
                 if (mounted) {
                   if (error != null) {
                     showErrorSnackBar(context, error);
@@ -115,20 +118,20 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
             ),
           ],
         );
-      }
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final activeSem = Provider.of<SemesterController>(context).activeSemester;
+    final activeSem =
+        Provider.of<SemesterController>(context).activeSemester;
     final tc = Provider.of<TimetableController>(context);
     final sc = Provider.of<SubjectController>(context);
 
     if (activeSem == null) return const Scaffold();
 
-    // Map subject IDs to names for quick display
-    final subjectMap = { for (var s in sc.subjects) s.id! : s.name };
+    final subjectMap = {for (var s in sc.subjects) s.id!: s.name};
 
     return Scaffold(
       appBar: AppBar(
@@ -139,48 +142,56 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen> with Single
           tabs: _days.map((d) => Tab(text: d)).toList(),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: _days.map((_) {
-          if (tc.slots.isEmpty) {
-            return const Center(child: Text('No classes scheduled for this day.'));
-          }
-          
-          return ListView.builder(
-            itemCount: tc.slots.length,
-            itemBuilder: (context, index) {
-              final slot = tc.slots[index];
-              final subName = subjectMap[slot.subId] ?? 'Unknown Subject';
-              
-              // Formatting time for display (converting 24h to 12h)
-              final format24 = DateFormat('HH:mm');
-              final format12 = DateFormat.jm();
-              
-              String displayTime = '';
-              try {
-                final st = format24.parse(slot.startTime);
-                final et = format24.parse(slot.endTime);
-                displayTime = '${format12.format(st)} - ${format12.format(et)}';
-              } catch (e) {
-  debugPrint("Error : $e");
-                displayTime = '${slot.startTime} - ${slot.endTime}';
-              }
+      body: tc.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: List.generate(6, (tabIndex) {
+                final dayOfWeek = tabIndex + 1;
+                final daySlots = tc.slotsByDay[dayOfWeek] ?? [];
 
-              return TimetableSetupCard(
-                slot: slot,
-                subName: subName,
-                displayTime: displayTime,
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  _showSlotDetails(slot, subName);
-                },
-              );
-            },
-          );
-        }).toList(),
-      ),
+                if (daySlots.isEmpty) {
+                  return const Center(
+                      child: Text('No classes scheduled for this day.'));
+                }
+
+                return ListView.builder(
+                  itemCount: daySlots.length,
+                  itemBuilder: (context, index) {
+                    final slot = daySlots[index];
+                    final subName =
+                        subjectMap[slot.subId] ?? 'Unknown Subject';
+
+                    final format24 = DateFormat('HH:mm');
+                    final format12 = DateFormat.jm();
+
+                    String displayTime = '';
+                    try {
+                      final st = format24.parse(slot.startTime);
+                      final et = format24.parse(slot.endTime);
+                      displayTime =
+                          '${format12.format(st)} - ${format12.format(et)}';
+                    } catch (e) {
+                      debugPrint('TimetableSetup time parse error: $e');
+                      displayTime = '${slot.startTime} - ${slot.endTime}';
+                    }
+
+                    return TimetableSetupCard(
+                      slot: slot,
+                      subName: subName,
+                      displayTime: displayTime,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        _showSlotDetails(slot, subName);
+                      },
+                    );
+                  },
+                );
+              }),
+            ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddSlotModal(activeSem.id!, tc.selectedDayOfWeek, sc.subjects),
+        onPressed: () =>
+            _showAddSlotModal(activeSem.id!, tc.selectedDayOfWeek, sc.subjects),
         child: const Icon(Icons.add),
       ),
     );
