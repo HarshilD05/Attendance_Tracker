@@ -29,7 +29,7 @@ class AnalyticsService {
     // => x >= (req * total - attended) / (1 - req)
     if (req >= 1.0) return remaining; // Edge case
     final needed = ((req * total - attended) / (1 - req)).ceil();
-    return needed < 0 ? 0 : (needed > remaining ? remaining : needed);
+    return needed < 0 ? 0 : needed;
   }
 
   /// Walk the calendar from today to semester end date, counting scheduled lectures

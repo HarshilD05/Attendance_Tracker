@@ -23,8 +23,8 @@ class AttendanceCardData {
   final String label;
   final AttendanceStats stats;
   final double minReq;         // For donut color coding
-  final int missable;          // Lecs you can still skip (≥0, 0 if already below)
-  final int toRecover;         // Consecutive lecs needed to recover (0 if already safe)
+  final int? missable;          // Lecs you can still skip (≥0, 0 if already below)
+  final int? toRecover;         // Consecutive lecs needed to recover (0 if already safe)
   final int? remainingLecs;    // null = hide in Monthly view
 
   const AttendanceCardData({

@@ -9,9 +9,7 @@ import '../models/timetable_slot.dart';
 import '../models/subject.dart';
 import '../widgets/add_slot_modal.dart';
 import '../widgets/timetable_setup_card.dart';
-import '../widgets/primary_button.dart';
 import '../widgets/error_snackbar.dart';
-import '../config/theme.dart';
 
 class TimetableSetupScreen extends StatefulWidget {
   const TimetableSetupScreen({Key? key}) : super(key: key);
@@ -77,48 +75,31 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen>
     );
   }
 
-  void _showSlotDetails(TimetableSlot slot, String subjectName) {
+  void _confirmDeleteSlot(BuildContext context, TimetableSlot slot, String subName) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor:
-              Theme.of(context).extension<AppColorScheme>()!.surface,
-          title: Text(subjectName),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Time: ${slot.startTime} - ${slot.endTime}'),
-              if (slot.classRoom.isNotEmpty) Text('Classroom: ${slot.classRoom}'),
-            ],
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Slot'),
+        content: Text('Are you sure you want to remove the slot for $subName?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            ),
-            PrimaryButton(
-              text: 'Remove Slot',
-              isDestructive: true,
-              onPressed: () async {
-                HapticFeedback.heavyImpact();
-                final error = await Provider.of<TimetableController>(
-                        context,
-                        listen: false)
-                    .removeSlot(slot.slotId!, slot.semId);
-                if (mounted) {
-                  if (error != null) {
-                    showErrorSnackBar(context, error);
-                  } else {
-                    Navigator.pop(context);
-                  }
-                }
-              },
-            ),
-          ],
-        );
-      },
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              HapticFeedback.heavyImpact();
+              final error = await Provider.of<TimetableController>(context, listen: false).removeSlot(slot.slotId!, slot.semId);
+              if (mounted && error != null) {
+                showErrorSnackBar(context, error);
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -156,6 +137,7 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen>
                 }
 
                 return ListView.builder(
+                  padding: const EdgeInsets.only(bottom: 84),
                   itemCount: daySlots.length,
                   itemBuilder: (context, index) {
                     final slot = daySlots[index];
@@ -180,9 +162,9 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen>
                       slot: slot,
                       subName: subName,
                       displayTime: displayTime,
-                      onTap: () {
+                      onDelete: () {
                         HapticFeedback.lightImpact();
-                        _showSlotDetails(slot, subName);
+                        _confirmDeleteSlot(context, slot, subName);
                       },
                     );
                   },

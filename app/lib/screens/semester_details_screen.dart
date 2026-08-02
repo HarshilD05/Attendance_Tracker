@@ -13,6 +13,7 @@ import '../widgets/success_snackbar.dart';
 import 'subjects_screen.dart';
 import 'holidays_screen.dart';
 import 'timetable_setup_screen.dart';
+import '../config/theme.dart';
 
 class SemesterDetailsScreen extends StatelessWidget {
   const SemesterDetailsScreen({Key? key}) : super(key: key);
@@ -64,25 +65,83 @@ class SemesterDetailsScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 32),
-            PrimaryButton(
-              text: 'Manage Subjects',
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0, left: 4.0),
+              child: Text(
+                'MANAGE',
+                style: TextStyle(
+                  color: Theme.of(context).extension<AppColorScheme>()!.textMuted,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+            FilledButton.icon(
+              icon: const Icon(Icons.menu_book),
+              label: const Text('Subjects', style: TextStyle(fontSize: 16)),
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).extension<AppColorScheme>()!.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(56),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
               onPressed: () {
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SubjectsScreen()));
               },
             ),
             const SizedBox(height: 16),
-            PrimaryButton(
-              text: 'Manage Holidays',
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const HolidaysScreen()));
-              },
-            ),
-            const SizedBox(height: 16),
-            PrimaryButton(
-              text: 'Manage Timetable',
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const TimetableSetupScreen()));
-              },
+            Row(
+              children: [
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Theme.of(context).extension<AppColorScheme>()!.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: EdgeInsets.zero,
+                      ),
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const HolidaysScreen()));
+                      },
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.beach_access, size: 36),
+                          SizedBox(height: 8),
+                          Text('Holidays', style: TextStyle(fontSize: 16)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: AspectRatio(
+                    aspectRatio: 1,
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Theme.of(context).extension<AppColorScheme>()!.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: EdgeInsets.zero,
+                      ),
+                      onPressed: () {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const TimetableSetupScreen()));
+                      },
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.calendar_month, size: 36),
+                          SizedBox(height: 8),
+                          Text('Timetable', style: TextStyle(fontSize: 16)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             const Spacer(),
             PrimaryButton(

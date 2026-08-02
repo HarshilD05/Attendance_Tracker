@@ -13,6 +13,7 @@ class HomeSlotCard extends StatelessWidget {
   final VoidCallback onRemoveExtra;
   final void Function(int isCancelled, String studentStatus) onMarkAttendance;
   final String selectedDateIso;
+  final bool isFutureDate;
 
   const HomeSlotCard({
     Key? key,
@@ -23,10 +24,12 @@ class HomeSlotCard extends StatelessWidget {
     required this.onRemoveExtra,
     required this.onMarkAttendance,
     required this.selectedDateIso,
+    this.isFutureDate = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final app_colors = Theme.of(context).extension<AppColorScheme>()!;
     final isPresent = existingAttendance?.studentStatus == 'P';
     final isAbsent = existingAttendance?.studentStatus == 'A';
     final isCancelled = existingAttendance?.isCancelled == 1;
@@ -35,6 +38,7 @@ class HomeSlotCard extends StatelessWidget {
       key: ValueKey('${slot.slotId}_$selectedDateIso'),
       direction: DismissDirection.horizontal,
       confirmDismiss: (direction) async {
+        if (isFutureDate) return false;
         final newStatus = isCancelled ? 0 : 1;
         if (newStatus == 1) {
           HapticFeedback.heavyImpact();
@@ -127,7 +131,7 @@ class HomeSlotCard extends StatelessWidget {
               ],
             ),
             if (displayTime.isNotEmpty)
-              Text(displayTime, style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary)),
+              Text(displayTime, style: TextStyle(color: app_colors.textSecondary)),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -135,15 +139,15 @@ class HomeSlotCard extends StatelessWidget {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isPresent
-                          ? Theme.of(context).extension<AppColorScheme>()!.present
-                          : Theme.of(context).extension<AppColorScheme>()!.surface,
-                      foregroundColor: isPresent ? Colors.white : Theme.of(context).extension<AppColorScheme>()!.textSecondary,
+                          ? app_colors.present
+                          : app_colors.surface,
+                      foregroundColor: isPresent ? Colors.white : app_colors.textSecondary,
                       side: BorderSide(
                           color: isPresent
-                              ? Theme.of(context).extension<AppColorScheme>()!.present
-                              : Theme.of(context).extension<AppColorScheme>()!.textMuted.withOpacity(0.2)),
+                              ? app_colors.present
+                              : app_colors.textMuted.withOpacity(0.2)),
                     ),
-                    onPressed: () => onMarkAttendance(0, isPresent ? 'U' : 'P'),
+                    onPressed: isFutureDate ? null : () => onMarkAttendance(0, isPresent ? 'U' : 'P'),
                     child: const Text('Present'),
                   ),
                 ),
@@ -152,15 +156,15 @@ class HomeSlotCard extends StatelessWidget {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isAbsent
-                          ? Theme.of(context).extension<AppColorScheme>()!.absent
-                          : Theme.of(context).extension<AppColorScheme>()!.surface,
-                      foregroundColor: isAbsent ? Colors.white : Theme.of(context).extension<AppColorScheme>()!.textSecondary,
+                          ? app_colors.absent
+                          : app_colors.surface,
+                      foregroundColor: isAbsent ? Colors.white : app_colors.textSecondary,
                       side: BorderSide(
                           color: isAbsent
-                              ? Theme.of(context).extension<AppColorScheme>()!.absent
-                              : Theme.of(context).extension<AppColorScheme>()!.textMuted.withOpacity(0.2)),
+                              ? app_colors.absent
+                              : app_colors.textMuted.withOpacity(0.2)),
                     ),
-                    onPressed: () => onMarkAttendance(0, isAbsent ? 'U' : 'A'),
+                    onPressed: isFutureDate ? null : () => onMarkAttendance(0, isAbsent ? 'U' : 'A'),
                     child: const Text('Absent'),
                   ),
                 ),

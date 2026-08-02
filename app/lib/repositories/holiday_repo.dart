@@ -23,4 +23,9 @@ class HolidayRepo {
     final db = await dbHelper.database;
     return await db.delete('Holiday', where: 'id = ?', whereArgs: [holidayId]);
   }
+
+  Future<int> updateHoliday(Holiday holiday) async {
+    final db = await dbHelper.database;
+    return await db.update('Holiday', holiday.toMap(), where: 'id = ?', whereArgs: [holiday.id]);
+  }
 }

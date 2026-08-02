@@ -7,33 +7,41 @@ class TimetableSetupCard extends StatelessWidget {
   final TimetableSlot slot;
   final String subName;
   final String displayTime;
-  final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   const TimetableSetupCard({
     Key? key,
     required this.slot,
     required this.subName,
     required this.displayTime,
-    required this.onTap,
+    required this.onDelete,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return CustomCard(
-      onTap: onTap,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(subName, style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 4),
-              Text(displayTime, style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(subName, style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 4),
+                Text(displayTime, style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary)),
+              ],
+            ),
           ),
           if (slot.classRoom.isNotEmpty)
-            Chip(label: Text(slot.classRoom, style: const TextStyle(fontSize: 12))),
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Chip(label: Text(slot.classRoom, style: const TextStyle(fontSize: 12))),
+            ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            onPressed: onDelete,
+          ),
         ],
       ),
     );

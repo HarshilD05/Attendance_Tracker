@@ -13,7 +13,7 @@ class DashedCirclePainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = min(size.width, size.height) / 2 - 2;
+    final radius = min(size.width, size.height) / 2;
 
     const int dashCount = 16;
     const double dashAngle = (2 * pi) / (dashCount * 2);

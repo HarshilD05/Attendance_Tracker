@@ -5,11 +5,9 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../controllers/semester_controller.dart';
 import '../controllers/holiday_controller.dart';
-import '../controllers/attendance_controller.dart';
 import '../models/holiday.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/error_snackbar.dart';
-import '../widgets/dashed_circle_painter.dart';
 import '../config/theme.dart';
 
 class HolidaysScreen extends StatefulWidget {
@@ -38,9 +36,6 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
           showErrorSnackBar(context, error);
         }
 
-        Provider.of<AttendanceController>(context, listen: false)
-            .loadUnmarkedDates(activeSem.id!);
-
         final format = DateFormat('yyyy-MM-dd');
         final semStart = format.parse(activeSem.startDate);
         if (_focusedDay.isBefore(semStart)) {
@@ -57,12 +52,13 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
     final displayFormat = DateFormat('MMM dd, yyyy (EEEE)');
     final dateStr = format.format(selectedDay);
     final displayStr = displayFormat.format(selectedDay);
+    final nameCtrl = TextEditingController(text: existingHoliday?.name ?? '');
 
     showDialog(
       context: context,
       builder: (context) {
         if (existingHoliday != null) {
-          // It's a Holiday → Show Remove button
+          // HOLIDAY -> Show edit field and Remove button
           return AlertDialog(
             backgroundColor:
                 Theme.of(context).extension<AppColorScheme>()!.surface,
@@ -77,8 +73,12 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
                             .extension<AppColorScheme>()!
                             .absent,
                         fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text('Name: ${existingHoliday.name}'),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'Holiday Name'),
+                ),
               ],
             ),
             actions: [
@@ -98,7 +98,7 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
                     if (error != null) {
                       showErrorSnackBar(context, error);
                     } else {
-                      Navigator.pop(context);
+                      Navigator.pop(context, 'removed');
                     }
                   }
                 },
@@ -158,7 +158,23 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
           );
         }
       },
-    );
+    ).then((result) async {
+      if (existingHoliday != null && result != 'removed') {
+        final newName = nameCtrl.text.trim();
+        if (newName.isNotEmpty && newName != existingHoliday.name) {
+          final updatedHol = Holiday(
+            id: existingHoliday.id,
+            semId: existingHoliday.semId,
+            date: existingHoliday.date,
+            name: newName,
+          );
+          if (mounted) {
+            await Provider.of<HolidayController>(context, listen: false)
+                .updateHoliday(updatedHol);
+          }
+        }
+      }
+    });
   }
 
   // ── Edit-mode toggle (tap = instant toggle) ─────────────────────────────────
@@ -185,8 +201,7 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
     final activeSem =
         Provider.of<SemesterController>(context).activeSemester;
     final holidayController = Provider.of<HolidayController>(context);
-    final attendanceController = Provider.of<AttendanceController>(context);
-
+    
     if (activeSem == null) return const Scaffold();
 
     final format = DateFormat('yyyy-MM-dd');
@@ -194,55 +209,11 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
     final semEnd = format.parse(activeSem.endDate);
 
     final holidayDates = {for (var h in holidayController.holidays) h.date: h};
-    final unmarkedDates = attendanceController.unmarkedDates;
     final colors = Theme.of(context).extension<AppColorScheme>()!;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Manage Holidays'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: _isEditMode
-                  ? FilledButton.icon(
-                      key: const ValueKey('save'),
-                      icon: const Icon(Icons.check, size: 18),
-                      label: const Text('Save Holidays'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: colors.present,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
-                      ),
-                      onPressed: () {
-                        HapticFeedback.mediumImpact();
-                        setState(() => _isEditMode = false);
-                      },
-                    )
-                  : OutlinedButton.icon(
-                      key: const ValueKey('edit'),
-                      icon: const Icon(Icons.edit_calendar_outlined, size: 18),
-                      label: const Text('Add Holiday'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: colors.primary,
-                        side: BorderSide(color: colors.primary),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
-                      ),
-                      onPressed: () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _isEditMode = true);
-                      },
-                    ),
-            ),
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -283,50 +254,6 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
               outsideTextStyle:
                   TextStyle(color: colors.textMuted.withOpacity(0.3)),
             ),
-            calendarBuilders: CalendarBuilders(
-              defaultBuilder: (context, day, focusedDay) {
-                final dateStr = format.format(day);
-                if (unmarkedDates.contains(dateStr)) {
-                  return Container(
-                    margin: const EdgeInsets.all(6.0),
-                    alignment: Alignment.center,
-                    child: CustomPaint(
-                      painter: DashedCirclePainter(color: colors.unmarked),
-                      child: Center(
-                        child: Text(
-                          '${day.day}',
-                          style: TextStyle(color: colors.textPrimary),
-                        ),
-                      ),
-                    ),
-                  );
-                }
-                return null;
-              },
-              todayBuilder: (context, day, focusedDay) {
-                final dateStr = format.format(day);
-                if (unmarkedDates.contains(dateStr)) {
-                  return Container(
-                    margin: const EdgeInsets.all(6.0),
-                    alignment: Alignment.center,
-                    child: CustomPaint(
-                      painter: DashedCirclePainter(color: colors.unmarked),
-                      child: Container(
-                        decoration: BoxDecoration(
-                            color: colors.primary, shape: BoxShape.circle),
-                        child: Center(
-                          child: Text(
-                            '${day.day}',
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }
-                return null;
-              },
-            ),
             eventLoader: (day) {
               final dateStr = format.format(day);
               if (holidayDates.containsKey(dateStr)) {
@@ -348,6 +275,48 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
                 _showDayPopup(selectedDay, existingHol, activeSem.id!);
               }
             },
+          ),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: _isEditMode
+                    ? FilledButton.icon(
+                        key: const ValueKey('save'),
+                        icon: const Icon(Icons.check),
+                        label: const Text('Save Holidays'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colors.present,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24)),
+                        ),
+                        onPressed: () {
+                          HapticFeedback.mediumImpact();
+                          setState(() => _isEditMode = false);
+                        },
+                      )
+                    : OutlinedButton.icon(
+                        key: const ValueKey('edit'),
+                        icon: const Icon(Icons.edit_calendar_outlined),
+                        label: const Text('Mass Update Holidays'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: colors.primary,
+                          side: BorderSide(color: colors.primary),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24)),
+                        ),
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _isEditMode = true);
+                        },
+                      ),
+              ),
+            ),
           ),
         ],
       ),

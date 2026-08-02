@@ -11,6 +11,7 @@ class AnalyticsRepo {
     int subId, {
     String? startDate,
     String? endDate,
+    List<String>? excludeDates,
   }) async {
     final db = await dbHelper.database;
 
@@ -24,6 +25,11 @@ class AnalyticsRepo {
     if (endDate != null) {
       where += ' AND date <= ?';
       args.add(endDate);
+    }
+    if (excludeDates != null && excludeDates.isNotEmpty) {
+      final placeholders = excludeDates.map((_) => '?').join(',');
+      where += ' AND date NOT IN ($placeholders)';
+      args.addAll(excludeDates);
     }
 
     final rows = await db.query('Attendance', where: where, whereArgs: args);
@@ -49,6 +55,7 @@ class AnalyticsRepo {
     int semId, {
     String? startDate,
     String? endDate,
+    List<String>? excludeDates,
   }) async {
     final db = await dbHelper.database;
 
@@ -62,6 +69,11 @@ class AnalyticsRepo {
     if (endDate != null) {
       where += ' AND date <= ?';
       args.add(endDate);
+    }
+    if (excludeDates != null && excludeDates.isNotEmpty) {
+      final placeholders = excludeDates.map((_) => '?').join(',');
+      where += ' AND date NOT IN ($placeholders)';
+      args.addAll(excludeDates);
     }
 
     final rows = await db.query('Attendance', where: where, whereArgs: args);
@@ -95,6 +107,7 @@ class AnalyticsRepo {
   Future<Map<String, AttendanceStats>> getStatsByMonth(
     int semId, {
     int? subId,
+    List<String>? excludeDates,
   }) async {
     final db = await dbHelper.database;
 
@@ -103,6 +116,11 @@ class AnalyticsRepo {
     if (subId != null) {
       where += ' AND sub_id = ?';
       args.add(subId);
+    }
+    if (excludeDates != null && excludeDates.isNotEmpty) {
+      final placeholders = excludeDates.map((_) => '?').join(',');
+      where += ' AND date NOT IN ($placeholders)';
+      args.addAll(excludeDates);
     }
 
     final rows = await db.query('Attendance', where: where, whereArgs: args);
@@ -135,15 +153,24 @@ class AnalyticsRepo {
   /// Get per-subject stats for a specific month (YYYY-MM).
   Future<Map<int, AttendanceStats>> getSubjectStatsByMonth(
     int semId,
-    String monthKey, // "YYYY-MM"
-  ) async {
+    String monthKey, {
+    List<String>? excludeDates,
+  }) async {
     final db = await dbHelper.database;
 
-    // SQLite: use LIKE for month prefix match on date column
+    String where = 'sem_id = ? AND is_cancelled = ? AND date LIKE ?';
+    List<dynamic> args = [semId, 0, '$monthKey%'];
+    
+    if (excludeDates != null && excludeDates.isNotEmpty) {
+      final placeholders = excludeDates.map((_) => '?').join(',');
+      where += ' AND date NOT IN ($placeholders)';
+      args.addAll(excludeDates);
+    }
+
     final rows = await db.query(
       'Attendance',
-      where: 'sem_id = ? AND is_cancelled = ? AND date LIKE ?',
-      whereArgs: [semId, 0, '$monthKey%'],
+      where: where,
+      whereArgs: args,
     );
 
     final Map<int, int> attended = {};

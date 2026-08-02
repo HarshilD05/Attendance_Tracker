@@ -54,10 +54,11 @@ class AnalyticsController with ChangeNotifier {
     try {
       final allSlots = await _getAllSlots(semester.id!);
       final holidays = await _holidayRepo.getHolidaysForSemester(semester.id!);
+      final excludeDates = holidays.map((h) => h.date).toList();
       final endDate = DateFormat('yyyy-MM-dd').parse(semester.endDate);
       final now = DateTime.now();
 
-      final allSubjectStats = await _analyticsRepo.getAllSubjectStats(semester.id!);
+      final allSubjectStats = await _analyticsRepo.getAllSubjectStats(semester.id!, excludeDates: excludeDates);
 
       // Build per-subject data
       final List<SubjectAnalyticsData> subjectData = [];
@@ -97,7 +98,7 @@ class AnalyticsController with ChangeNotifier {
       );
 
       // Build overall monthly bar data
-      final overallStatsByMonth = await _analyticsRepo.getStatsByMonth(semester.id!);
+      final overallStatsByMonth = await _analyticsRepo.getStatsByMonth(semester.id!, excludeDates: excludeDates);
       _overallBarData = AnalyticsService.buildBarData(overallStatsByMonth);
 
       // Also set up available months for monthly tab
@@ -127,10 +128,11 @@ class AnalyticsController with ChangeNotifier {
     try {
       final allSlots = await _getAllSlots(semester.id!);
       final holidays = await _holidayRepo.getHolidaysForSemester(semester.id!);
+      final excludeDates = holidays.map((h) => h.date).toList();
       final endDate = DateFormat('yyyy-MM-dd').parse(semester.endDate);
       final now = DateTime.now();
 
-      final stats = await _analyticsRepo.getSubjectStats(semester.id!, subject.id!);
+      final stats = await _analyticsRepo.getSubjectStats(semester.id!, subject.id!, excludeDates: excludeDates);
       final remaining = AnalyticsService.computeRemainingLecs(
         slots: allSlots,
         holidays: holidays,
@@ -147,7 +149,7 @@ class AnalyticsController with ChangeNotifier {
       );
 
       // Build monthly bar data for this subject
-      final statsByMonth = await _analyticsRepo.getStatsByMonth(semester.id!, subId: subject.id);
+      final statsByMonth = await _analyticsRepo.getStatsByMonth(semester.id!, subId: subject.id, excludeDates: excludeDates);
       _subjectBarData = AnalyticsService.buildBarData(statsByMonth);
 
       _error = null;
@@ -166,7 +168,9 @@ class AnalyticsController with ChangeNotifier {
     _setLoading(true);
 
     try {
-      final subjectStatsByMonth = await _analyticsRepo.getSubjectStatsByMonth(semester.id!, monthKey);
+      final holidays = await _holidayRepo.getHolidaysForSemester(semester.id!);
+      final excludeDates = holidays.map((h) => h.date).toList();
+      final subjectStatsByMonth = await _analyticsRepo.getSubjectStatsByMonth(semester.id!, monthKey, excludeDates: excludeDates);
 
       // Overall for the month
       final overallStats = AnalyticsService.aggregateOverall(subjectStatsByMonth.values);
@@ -174,8 +178,8 @@ class AnalyticsController with ChangeNotifier {
         label: _monthLabel(monthKey),
         stats: overallStats,
         minReq: semester.minAttendanceReq,
-        missable: 0,
-        toRecover: 0,
+        missable: null,
+        toRecover: null,
         remainingLecs: null, // Hidden in monthly view
       );
 

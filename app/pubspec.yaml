@@ -45,6 +45,8 @@ dependencies:
   flutter_local_notifications: ^22.2.0
   path: ^1.9.1
   timezone: ^0.11.1
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
 
 dev_dependencies:
   flutter_test:
@@ -71,6 +73,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - lib/config/schema.sql
+    - lib/assets/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 
@@ -99,3 +102,18 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "lib/assets/Attension_Logo.png"
+  min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#ffffff"
+  image: "lib/assets/Attension_Splash_Screen.png"
+  fullscreen: true
+  android_12:
+    image: "lib/assets/Attension_Splash_Screen.png"
+    color: "#ffffff"
+

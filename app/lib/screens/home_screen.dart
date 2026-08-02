@@ -6,6 +6,7 @@ import 'package:table_calendar/table_calendar.dart';
 import '../controllers/semester_controller.dart';
 import '../controllers/attendance_controller.dart';
 import '../controllers/subject_controller.dart';
+import '../controllers/holiday_controller.dart';
 import '../widgets/custom_card.dart';
 import '../widgets/error_snackbar.dart';
 import '../widgets/dashed_circle_painter.dart';
@@ -45,6 +46,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final unmarkedDates = ac.unmarkedDates;
+    final holidayController = Provider.of<HolidayController>(context, listen: false);
+    final holidayDates = {for (var h in holidayController.holidays) h.date: h};
+    final app_colors = Theme.of(context).extension<AppColorScheme>()!;
 
     final date = await showDialog<DateTime>(
       context: context,
@@ -52,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
         DateTime focusedDay = initialDate;
         DateTime? selectedDay = initialDate;
         return Dialog(
-          backgroundColor: Theme.of(context).extension<AppColorScheme>()!.surface,
+          backgroundColor: app_colors.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           insetPadding: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.025),
           child: Padding(
@@ -71,10 +75,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       calendarFormat: CalendarFormat.month,
                       headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
                       calendarStyle: CalendarStyle(
-                        todayDecoration: BoxDecoration(color: Theme.of(context).extension<AppColorScheme>()!.primary.withOpacity(0.3), shape: BoxShape.circle),
-                        selectedDecoration: BoxDecoration(color: Theme.of(context).extension<AppColorScheme>()!.primary, shape: BoxShape.circle),
-                        disabledTextStyle: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textMuted.withOpacity(0.3)),
-                        outsideTextStyle: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textMuted.withOpacity(0.3)),
+                        todayDecoration: BoxDecoration(color: app_colors.primary.withOpacity(0.3), shape: BoxShape.circle),
+                        selectedDecoration: BoxDecoration(color: app_colors.primary, shape: BoxShape.circle),
+                        markerDecoration: BoxDecoration(color: app_colors.absent, shape: BoxShape.circle),
+                        disabledTextStyle: TextStyle(color: app_colors.textMuted.withOpacity(0.3)),
+                        outsideTextStyle: TextStyle(color: app_colors.textMuted.withOpacity(0.3)),
                       ),
                       calendarBuilders: CalendarBuilders(
                         defaultBuilder: (context, day, focusedDay) {
@@ -84,11 +89,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               margin: const EdgeInsets.all(6.0),
                               alignment: Alignment.center,
                               child: CustomPaint(
-                                painter: DashedCirclePainter(color: Theme.of(context).extension<AppColorScheme>()!.unmarked),
+                                painter: DashedCirclePainter(color: app_colors.unmarked),
                                 child: Center(
                                   child: Text(
                                     '${day.day}',
-                                    style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textPrimary),
+                                    style: TextStyle(color: app_colors.textPrimary),
                                   ),
                                 ),
                               ),
@@ -103,13 +108,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               margin: const EdgeInsets.all(6.0),
                               alignment: Alignment.center,
                               child: CustomPaint(
-                                painter: DashedCirclePainter(color: Theme.of(context).extension<AppColorScheme>()!.unmarked),
+                                painter: DashedCirclePainter(color: app_colors.unmarked),
                                 child: Container(
-                                  decoration: BoxDecoration(color: Theme.of(context).extension<AppColorScheme>()!.primary.withOpacity(0.3), shape: BoxShape.circle),
+                                  decoration: BoxDecoration(color: app_colors.primary.withOpacity(0.3), shape: BoxShape.circle),
                                   child: Center(
                                     child: Text(
                                       '${day.day}',
-                                      style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textPrimary),
+                                      style: TextStyle(color: app_colors.textPrimary),
                                     ),
                                   ),
                                 ),
@@ -125,9 +130,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               margin: const EdgeInsets.all(6.0),
                               alignment: Alignment.center,
                               child: CustomPaint(
-                                painter: DashedCirclePainter(color: Theme.of(context).extension<AppColorScheme>()!.unmarked),
+                                painter: DashedCirclePainter(color: app_colors.unmarked),
                                 child: Container(
-                                  decoration: BoxDecoration(color: Theme.of(context).extension<AppColorScheme>()!.primary, shape: BoxShape.circle),
+                                  decoration: BoxDecoration(color: app_colors.primary, shape: BoxShape.circle),
                                   child: Center(
                                     child: Text(
                                       '${day.day}',
@@ -139,8 +144,28 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           }
                           return null;
+                        },
+                        markerBuilder: (context, day, events) {
+                          if (events.isNotEmpty) {
+                            return Positioned(
+                              bottom: 8,
+                              child: Icon(
+                                Icons.circle,
+                                size: 8,
+                                color: app_colors.absent,
+                              ),
+                            );
+                          }
+                          return null;
                         }
                       ),
+                      eventLoader: (day) {
+                        final dateStr = format.format(day);
+                        if (holidayDates.containsKey(dateStr)) {
+                          return ['Holiday'];
+                        }
+                        return [];
+                      },
                       onDaySelected: (newSelectedDay, newFocusedDay) {
                         HapticFeedback.selectionClick();
                         setState(() {
@@ -191,6 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final app_colors = Theme.of(context).extension<AppColorScheme>()!;
     final semesterController = Provider.of<SemesterController>(context);
     final activeSem = semesterController.activeSemester;
     final isLoading = semesterController.isLoading;
@@ -230,6 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           ac.setSelectedDate(targetDate, activeSem.id!);
           sc.loadSubjectsForSemester(activeSem.id!);
+          Provider.of<HolidayController>(context, listen: false).loadHolidaysForSemester(activeSem.id!);
           ac.backfillUnmarked(activeSem).then((_) {
             if (mounted) {
               ac.loadScheduleForDate(activeSem.id!);
@@ -270,6 +297,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final subjectMap = { for (var s in sc.subjects) s.id! : s };
     final attendanceMap = { for (var a in ac.todaysAttendance) a.slotId : a };
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final isFutureDate = ac.selectedDate.isAfter(today);
 
     return Scaffold(
       appBar: AppBar(
@@ -337,12 +368,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   Positioned(
                     top: 8,
                     right: 8,
-                    child: SizedBox(
-                      width: 34,
-                      height: 34,
-                      child: CustomPaint(
-                        painter: DashedCirclePainter(
-                          color: Colors.blue,
+                    child: IgnorePointer(
+                      child: SizedBox(
+                        width: 34,
+                        height: 34,
+                        child: CustomPaint(
+                          painter: DashedCirclePainter(
+                            color: app_colors.unmarked,
+                          ),
                         ),
                       ),
                     ),
@@ -357,13 +390,13 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.beach_access_rounded, size: 80, color: Theme.of(context).extension<AppColorScheme>()!.primary.withOpacity(0.8)),
+                  Icon(Icons.beach_access_rounded, size: 80, color: app_colors.primary.withOpacity(0.8)),
                   const SizedBox(height: 16),
-                  Text('Holiday!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Theme.of(context).extension<AppColorScheme>()!.textPrimary)),
+                  Text('Holiday!', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: app_colors.textPrimary)),
                   if (ac.currentHoliday?.name.isNotEmpty == true)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(ac.currentHoliday!.name, style: TextStyle(fontSize: 16, color: Theme.of(context).extension<AppColorScheme>()!.textMuted)),
+                      child: Text(ac.currentHoliday!.name, style: TextStyle(fontSize: 16, color: app_colors.textMuted)),
                     ),
                 ],
               ),
@@ -373,15 +406,16 @@ class _HomeScreenState extends State<HomeScreen> {
               : Column(
               children: [
                 // ── All Present / All Absent quick bar ──────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Row(
+                if (!isFutureDate)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    child: Row(
                     children: [
                       Expanded(
                         child: _QuickMarkButton(
                           label: 'All Present',
                           icon: Icons.check_circle_outline,
-                          color: Theme.of(context).extension<AppColorScheme>()!.present,
+                          color: app_colors.present,
                           onTap: () => _markAll(activeSem.id!, 'P', ac),
                         ),
                       ),
@@ -390,7 +424,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: _QuickMarkButton(
                           label: 'All Absent',
                           icon: Icons.cancel_outlined,
-                          color: Theme.of(context).extension<AppColorScheme>()!.absent,
+                          color: app_colors.absent,
                           onTap: () => _markAll(activeSem.id!, 'A', ac),
                         ),
                       ),
@@ -424,6 +458,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         displayTime: displayTime,
                         existingAttendance: existingAttendance,
                         selectedDateIso: ac.selectedDate.toIso8601String(),
+                        isFutureDate: isFutureDate,
                         onRemoveExtra: () async {
                           final error = await ac.removeExtraLec(activeSem.id!, slot.extraLecId!);
                           if (error != null && mounted) {
@@ -440,7 +475,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
       floatingActionButton: 
-        ac.isHoliday ? null : 
+        ac.isHoliday || isFutureDate ? null : 
         SizedBox(
           width: MediaQuery.of(context).size.width * 0.3,
           child: FloatingActionButton.extended(
@@ -462,7 +497,7 @@ class _HomeScreenState extends State<HomeScreen> {
             },
             icon: const Icon(Icons.add),
             label: const Text('Extra Lec'),
-            backgroundColor: Theme.of(context).extension<AppColorScheme>()!.primary,
+            backgroundColor: app_colors.primary,
             foregroundColor: Colors.white,
           ),
         ),

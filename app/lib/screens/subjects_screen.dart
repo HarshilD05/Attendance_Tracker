@@ -224,6 +224,7 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
       body: subjectController.subjects.isEmpty
           ? const Center(child: Text('No subjects added yet.'))
           : ListView.builder(
+              padding: const EdgeInsets.only(bottom: 84),
               itemCount: subjectController.subjects.length,
               itemBuilder: (context, index) {
                 final sub = subjectController.subjects[index];

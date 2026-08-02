@@ -354,23 +354,26 @@ class AttendanceCard extends StatelessWidget {
                 ),
                 _divider(context),
               ],
-              Expanded(
-                child: _StatTile(
-                  label: actionLabel,
-                  value: actionValue,
-                  valueColor: actionColor,
-                  icon: isSafe ? Icons.check_circle_outline : Icons.trending_up,
+              if (data.missable != null && data.toRecover != null) ...[
+                Expanded(
+                  child: _StatTile(
+                    label: actionLabel,
+                    value: actionValue,
+                    valueColor: actionColor,
+                    icon: isSafe ? Icons.check_circle_outline : Icons.trending_up,
+                  ),
                 ),
-              ),
-              _divider(context),
-              Expanded(
-                child: _StatTile(
-                  label: 'Required',
-                  value: '${data.minReq.toStringAsFixed(0)}%',
-                  icon: Icons.flag_outlined,
-                  valueColor: colors.textSecondary,
+                _divider(context),
+
+                Expanded(
+                  child: _StatTile(
+                    label: 'Required',
+                    value: '${data.minReq.toStringAsFixed(0)}%',
+                    icon: Icons.flag_outlined,
+                    valueColor: colors.textSecondary,
+                  ),
                 ),
-              ),
+              ]
             ],
           ),
         ],

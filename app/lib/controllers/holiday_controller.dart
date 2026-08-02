@@ -41,4 +41,15 @@ class HolidayController with ChangeNotifier {
       return 'Failed to remove holiday.';
     }
   }
+
+  Future<String?> updateHoliday(Holiday holiday) async {
+    try {
+      await _holidayRepo.updateHoliday(holiday);
+      await loadHolidaysForSemester(holiday.semId);
+      return null;
+    } catch (e) {
+      debugPrint("Error : $e");
+      return 'Failed to update holiday.';
+    }
+  }
 }
