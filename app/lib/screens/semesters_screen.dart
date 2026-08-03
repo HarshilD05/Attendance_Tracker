@@ -8,14 +8,16 @@ import 'create_semester_screen.dart';
 import 'semester_details_screen.dart';
 import 'package:intl/intl.dart';
 import '../models/semester.dart';
+import '../config/theme.dart';
 
 class SemestersScreen extends StatelessWidget {
-  const SemestersScreen({Key? key}) : super(key: key);
+  const SemestersScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final semesterController = Provider.of<SemesterController>(context);
     final semesters = semesterController.semesters;
+    final appColors = Theme.of(context).extension<AppColorScheme>()!;
 
     return Scaffold(
       appBar: AppBar(
@@ -51,7 +53,7 @@ class SemestersScreen extends StatelessWidget {
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     icon: const Icon(Icons.calendar_today, size: 16),
-                                    label: Text(sem.startDate, style: const TextStyle(fontSize: 12)),
+                                    label: Text(sem.startDate, style: TextStyle(fontSize: 12, color: appColors.textSecondary)),
                                     onPressed: null,
                                   ),
                                 ),
@@ -59,7 +61,7 @@ class SemestersScreen extends StatelessWidget {
                                 Expanded(
                                   child: OutlinedButton.icon(
                                     icon: const Icon(Icons.calendar_today, size: 16),
-                                    label: Text(sem.endDate, style: const TextStyle(fontSize: 12)),
+                                    label: Text(sem.endDate, style: TextStyle(fontSize: 12, color: appColors.textSecondary)),
                                     onPressed: null,
                                   ),
                                 ),
@@ -94,6 +96,7 @@ class SemestersScreen extends StatelessWidget {
     final nameCtrl = TextEditingController(text: sem.name);
     DateTime? startDate = DateFormat('yyyy-MM-dd').parse(sem.startDate);
     DateTime? endDate = DateFormat('yyyy-MM-dd').parse(sem.endDate);
+    final appColors = Theme.of(context).extension<AppColorScheme>()!;
 
     showDialog(
       context: context,
@@ -118,7 +121,7 @@ class SemestersScreen extends StatelessWidget {
                         Expanded(
                           child: OutlinedButton.icon(
                             icon: const Icon(Icons.calendar_today, size: 16),
-                            label: Text(DateFormat('yyyy-MM-dd').format(startDate!), style: const TextStyle(fontSize: 12)),
+                            label: Text(DateFormat('yyyy-MM-dd').format(startDate!), style: TextStyle(fontSize: 12, color: appColors.textSecondary)),
                             onPressed: () async {
                               final date = await showDatePicker(
                                 context: context,
@@ -136,7 +139,7 @@ class SemestersScreen extends StatelessWidget {
                         Expanded(
                           child: OutlinedButton.icon(
                             icon: const Icon(Icons.calendar_today, size: 16),
-                            label: Text(DateFormat('yyyy-MM-dd').format(endDate!), style: const TextStyle(fontSize: 12)),
+                            label: Text(DateFormat('yyyy-MM-dd').format(endDate!), style: TextStyle(fontSize: 12, color: appColors.textSecondary)),
                             onPressed: () async {
                               final date = await showDatePicker(
                                 context: context,

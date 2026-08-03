@@ -10,12 +10,12 @@ class TimetableSetupCard extends StatelessWidget {
   final VoidCallback onDelete;
 
   const TimetableSetupCard({
-    Key? key,
+    super.key,
     required this.slot,
     required this.subName,
     required this.displayTime,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

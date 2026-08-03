@@ -10,7 +10,7 @@ import '../widgets/error_snackbar.dart';
 import '../config/theme.dart';
 
 class SubjectsScreen extends StatefulWidget {
-  const SubjectsScreen({Key? key}) : super(key: key);
+  const SubjectsScreen({super.key});
 
   @override
   State<SubjectsScreen> createState() => _SubjectsScreenState();
@@ -88,12 +88,11 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
                         minAttendanceReq: double.tryParse(reqCtrl.text) ?? defaultMinReq,
                       );
                       final error = await Provider.of<SubjectController>(context, listen: false).addSubject(sub);
-                      if (mounted) {
-                        if (error != null) {
-                          showErrorSnackBar(context, error);
-                        } else {
-                          Navigator.pop(context);
-                        }
+                      if (!context.mounted) return;
+                      if (error != null) {
+                        showErrorSnackBar(context, error);
+                      } else {
+                        Navigator.pop(context);
                       }
                     }
                   },
@@ -122,7 +121,8 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
               Navigator.pop(ctx);
               HapticFeedback.heavyImpact();
               final error = await Provider.of<SubjectController>(context, listen: false).removeSubject(subject.id!, subject.semId);
-              if (mounted && error != null) {
+              if (!context.mounted) return;
+              if (error != null) {
                 showErrorSnackBar(context, error);
               }
             },
@@ -191,12 +191,11 @@ class _SubjectsScreenState extends State<SubjectsScreen> {
                         minAttendanceReq: double.tryParse(reqCtrl.text) ?? subject.minAttendanceReq,
                       );
                       final error = await Provider.of<SubjectController>(context, listen: false).updateSubject(sub);
-                      if (mounted) {
-                        if (error != null) {
-                          showErrorSnackBar(context, error);
-                        } else {
-                          Navigator.pop(context);
-                        }
+                      if (!context.mounted) return;
+                      if (error != null) {
+                        showErrorSnackBar(context, error);
+                      } else {
+                        Navigator.pop(context);
                       }
                     }
                   },

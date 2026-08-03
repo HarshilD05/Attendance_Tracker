@@ -6,8 +6,8 @@ import '../config/theme.dart';
 // ─── Zone color helper (context-aware) ────────────────────────────────────────
 
 Color _zoneColor(double percentage, double minReq, AppColorScheme colors) {
-  if (percentage >= minReq + 5) return colors.attendanceSafe;
-  if (percentage >= minReq - 5) return colors.attendanceWarning;
+  if (percentage >= minReq + 7) return colors.attendanceSafe;
+  if (percentage >= minReq) return colors.attendanceWarning;
   return colors.attendanceDanger;
 }
 
@@ -161,14 +161,14 @@ class _AnimatedDonutState extends State<_AnimatedDonut>
         children: [
           AnimatedBuilder(
             animation: _animation,
-            builder: (_, __) => CustomPaint(
+            builder: (context, child) => CustomPaint(
               size: Size(widget.size, widget.size),
               painter: _DonutPainter(
                 percentage: widget.percentage,
                 unmarkedPercentage: widget.unmarkedPercentage,
                 fillColor: color,
                 unmarkedColor: colors.unmarked,
-                trackColor: colors.textMuted.withOpacity(0.15),
+                trackColor: colors.textMuted.withValues(alpha: 0.15),
                 animation: _animation,
                 strokeWidth: widget.strokeWidth,
               ),
@@ -262,8 +262,9 @@ class _LegendRow extends StatelessWidget {
 
 class AttendanceCard extends StatelessWidget {
   final AttendanceCardData data;
+  final bool showDetailed;
 
-  const AttendanceCard({Key? key, required this.data}) : super(key: key);
+  const AttendanceCard({super.key, required this.data, this.showDetailed = true});
 
   @override
   Widget build(BuildContext context) {
@@ -283,10 +284,10 @@ class AttendanceCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: zoneColor.withOpacity(0.3), width: 1.5),
+        border: Border.all(color: zoneColor.withValues(alpha: 0.3), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: zoneColor.withOpacity(0.07),
+            color: zoneColor.withValues(alpha: 0.07),
             blurRadius: 20,
             offset: const Offset(0, 4),
           ),
@@ -339,7 +340,7 @@ class AttendanceCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 20),
-          Divider(color: colors.textMuted.withOpacity(0.15)),
+          Divider(color: colors.textMuted.withValues(alpha: 0.15)),
           const SizedBox(height: 12),
 
           Row(
@@ -384,7 +385,7 @@ class AttendanceCard extends StatelessWidget {
   Widget _divider(BuildContext context) => Container(
         width: 1,
         height: 36,
-        color: Theme.of(context).extension<AppColorScheme>()!.textMuted.withOpacity(0.15),
+        color: Theme.of(context).extension<AppColorScheme>()!.textMuted.withValues(alpha: 0.15),
         margin: const EdgeInsets.symmetric(horizontal: 4),
       );
 }
@@ -395,7 +396,7 @@ class SubjectAttendanceRow extends StatelessWidget {
   final SubjectAnalyticsData data;
   final VoidCallback? onTap;
 
-  const SubjectAttendanceRow({Key? key, required this.data, this.onTap}) : super(key: key);
+  const SubjectAttendanceRow({super.key, required this.data, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -412,7 +413,7 @@ class SubjectAttendanceRow extends StatelessWidget {
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: zoneColor.withOpacity(0.25)),
+          border: Border.all(color: zoneColor.withValues(alpha: 0.25)),
         ),
         child: Row(
           children: [

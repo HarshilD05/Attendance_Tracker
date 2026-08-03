@@ -211,7 +211,7 @@ class SemesterController with ChangeNotifier {
 
       return exportData.toJsonString();
     } catch (e) {
-      print('Export error: $e');
+      debugPrint('Export error: $e');
       return null;
     }
   }
@@ -286,7 +286,7 @@ class SemesterController with ChangeNotifier {
       
       return null; // Success
     } catch (e) {
-      print('Import error: $e');
+      debugPrint('Import error: $e');
       return 'Invalid Semester JSON format';
     }
   }

@@ -9,7 +9,7 @@ import '../widgets/attendance_card.dart';
 import '../config/theme.dart';
 
 class AnalyticsScreen extends StatefulWidget {
-  const AnalyticsScreen({Key? key}) : super(key: key);
+  const AnalyticsScreen({super.key});
 
   @override
   State<AnalyticsScreen> createState() => _AnalyticsScreenState();
@@ -117,7 +117,7 @@ class _OverallTab extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 11,
                   letterSpacing: 1.2,
-                  color: Theme.of(context).extension<AppColorScheme>()!.textMuted,
+                  color: Theme.of(context).extension<AppColorScheme>()!.textSecondary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -136,7 +136,7 @@ class _OverallTab extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 letterSpacing: 1.2,
-                color: Theme.of(context).extension<AppColorScheme>()!.textMuted,
+                color: Theme.of(context).extension<AppColorScheme>()!.textSecondary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -172,9 +172,7 @@ class _SubjectTabState extends State<_SubjectTab> {
     if (subjects.isEmpty) return const _EmptyView('No subjects added yet.');
 
     // Default to first subject and auto-load on first open
-    if (_selectedSubject == null) {
-      _selectedSubject = subjects.first;
-    }
+    _selectedSubject ??= subjects.first;
     if (!_firstLoadDone) {
       _firstLoadDone = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -189,7 +187,7 @@ class _SubjectTabState extends State<_SubjectTab> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: DropdownButtonFormField<Subject>(
-            value: _selectedSubject,
+            initialValue: _selectedSubject,
             decoration: InputDecoration(
               labelText: 'Select Subject',
               filled: true,
@@ -227,7 +225,7 @@ class _SubjectTabState extends State<_SubjectTab> {
                       style: TextStyle(
                         fontSize: 11,
                         letterSpacing: 1.2,
-                        color: Theme.of(context).extension<AppColorScheme>()!.textMuted,
+                        color: Theme.of(context).extension<AppColorScheme>()!.textSecondary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -277,12 +275,12 @@ class _MonthlyBarChart extends StatelessWidget {
               children: data.map((d) {
                 final barHeight = (d.percentage / 100) * barMaxHeight;
                 final colors = Theme.of(context).extension<AppColorScheme>()!;
-                final color = d.percentage >= minReq + 5
+                final color = d.percentage >= minReq + 7
                     ? colors.attendanceSafe
-                    : d.percentage >= minReq - 5
+                    : d.percentage >= minReq
                         ? colors.attendanceWarning
                         : colors.attendanceDanger;
-                final barColor = d.isCurrent ? color.withOpacity(0.65) : color;
+                final barColor = d.isCurrent ? color.withValues(alpha: 0.65) : color;
 
                 return Expanded(
                   child: Padding(
@@ -337,7 +335,7 @@ class _MonthlyBarChart extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 10,
-                      color: d.isCurrent ? Theme.of(context).extension<AppColorScheme>()!.textSecondary : Theme.of(context).extension<AppColorScheme>()!.textMuted,
+                      color: Theme.of(context).extension<AppColorScheme>()!.textSecondary,
                       fontWeight: d.isCurrent ? FontWeight.bold : FontWeight.normal,
                     ),
                   ),
@@ -395,7 +393,7 @@ class _MonthlyTabState extends State<_MonthlyTab> {
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: DropdownButtonFormField<String>(
-            value: ac.selectedMonthKey,
+            initialValue: ac.selectedMonthKey,
             decoration: InputDecoration(
               labelText: 'Select Month',
               filled: true,
@@ -430,7 +428,7 @@ class _MonthlyTabState extends State<_MonthlyTab> {
                     style: TextStyle(
                       fontSize: 11,
                       letterSpacing: 1.2,
-                      color: Theme.of(context).extension<AppColorScheme>()!.textMuted,
+                      color: Theme.of(context).extension<AppColorScheme>()!.textSecondary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

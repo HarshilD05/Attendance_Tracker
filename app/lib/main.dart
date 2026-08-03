@@ -7,12 +7,16 @@ import 'controllers/holiday_controller.dart';
 import 'controllers/attendance_controller.dart';
 import 'controllers/timetable_controller.dart';
 import 'controllers/analytics_controller.dart';
-import 'screens/main_navigation.dart';
+import 'screens/splash_screen.dart';
+import 'package:flutter/services.dart';
 import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService().initialize();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+  ]);
   runApp(const AttendanceTrackerApp());
 }
 
@@ -36,7 +40,7 @@ class AttendanceTrackerApp extends StatelessWidget {
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
-        home: const MainNavigation(),
+        home: const SplashScreen(),
       ),
     );
   }

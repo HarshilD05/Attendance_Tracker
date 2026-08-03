@@ -11,7 +11,7 @@ import '../widgets/error_snackbar.dart';
 import '../config/theme.dart';
 
 class HolidaysScreen extends StatefulWidget {
-  const HolidaysScreen({Key? key}) : super(key: key);
+  const HolidaysScreen({super.key});
 
   @override
   State<HolidaysScreen> createState() => _HolidaysScreenState();
@@ -67,11 +67,11 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Status: HOLIDAY',
+                Text('HOLIDAY',
                     style: TextStyle(
                         color: Theme.of(context)
                             .extension<AppColorScheme>()!
-                            .absent,
+                            .holiday,
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 TextField(
@@ -94,12 +94,11 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
                           context,
                           listen: false)
                       .removeHoliday(existingHoliday.id!, semId);
-                  if (mounted) {
-                    if (error != null) {
-                      showErrorSnackBar(context, error);
-                    } else {
-                      Navigator.pop(context, 'removed');
-                    }
+                  if (!context.mounted) return;
+                  if (error != null) {
+                    showErrorSnackBar(context, error);
+                  } else {
+                    Navigator.pop(context, 'removed');
                   }
                 },
               ),
@@ -116,9 +115,12 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Status: REGULAR DAY',
+                Text('REGULAR DAY',
                     style: TextStyle(
-                        color: Colors.green, fontWeight: FontWeight.bold)),
+                        color: Theme.of(context)
+                            .extension<AppColorScheme>()!
+                            .textSecondary,
+                        fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 TextField(
                   controller: nameCtrl,
@@ -145,12 +147,11 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
                           context,
                           listen: false)
                       .addHoliday(newHol);
-                  if (mounted) {
-                    if (error != null) {
-                      showErrorSnackBar(context, error);
-                    } else {
-                      Navigator.pop(context);
-                    }
+                  if (!context.mounted) return;
+                  if (error != null) {
+                    showErrorSnackBar(context, error);
+                  } else {
+                    Navigator.pop(context);
                   }
                 },
               ),
@@ -222,7 +223,7 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              color: colors.primary.withOpacity(0.1),
+              color: colors.primary.withValues(alpha: 0.1),
               child: Row(
                 children: [
                   Icon(Icons.touch_app_rounded, size: 16, color: colors.primary),
@@ -247,20 +248,53 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
             calendarStyle: CalendarStyle(
               todayDecoration: BoxDecoration(
                   color: colors.primary, shape: BoxShape.circle),
-              markerDecoration: BoxDecoration(
-                  color: colors.absent, shape: BoxShape.circle),
               disabledTextStyle:
-                  TextStyle(color: colors.textMuted.withOpacity(0.3)),
+                  TextStyle(color: colors.textMuted.withValues(alpha: 0.3)),
               outsideTextStyle:
-                  TextStyle(color: colors.textMuted.withOpacity(0.3)),
+                  TextStyle(color: colors.textMuted.withValues(alpha: 0.3)),
             ),
-            eventLoader: (day) {
-              final dateStr = format.format(day);
-              if (holidayDates.containsKey(dateStr)) {
-                return ['Holiday'];
-              }
-              return [];
-            },
+            calendarBuilders: CalendarBuilders(
+              defaultBuilder: (context, day, focusedDay) {
+                final dateStr = format.format(day);
+                if (holidayDates.containsKey(dateStr)) {
+                  return Container(
+                    margin: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: colors.holiday,
+                      shape: BoxShape.rectangle,
+                      borderRadius: BorderRadius.circular(7),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${day.day}',
+                      style: TextStyle(
+                          color: colors.holidayText, fontWeight: FontWeight.bold),
+                    ),
+                  );
+                }
+                return null;
+              },
+              todayBuilder: (context, day, focusedDay) {
+                final dateStr = format.format(day);
+                if (holidayDates.containsKey(dateStr)) {
+                  return Container(
+                    margin: const EdgeInsets.all(6.0),
+                    decoration: BoxDecoration(
+                      color: colors.holiday,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      '${day.day}',
+                      style: TextStyle(
+                          color: colors.holidayText, fontWeight: FontWeight.bold),
+                    ),
+                  );
+                }
+                return null;
+              },
+              
+            ),
             onDaySelected: (selectedDay, focusedDay) {
               setState(() => _focusedDay = focusedDay);
               final dateStr = format.format(selectedDay);
@@ -290,7 +324,7 @@ class _HolidaysScreenState extends State<HolidaysScreen> {
                         icon: const Icon(Icons.check),
                         label: const Text('Save Holidays'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: colors.present,
+                          backgroundColor: colors.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(24)),

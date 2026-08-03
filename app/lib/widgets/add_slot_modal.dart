@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/subject.dart';
 import '../models/timetable_slot.dart';
@@ -19,15 +18,17 @@ class AddSlotModal extends StatefulWidget {
   final List<Subject> subjects;
   final List<TimetableSlot> existingSlots;
   final String? specificDate;
+  final Future<String?> Function(TimetableSlot) onSave;
 
   const AddSlotModal({
-    Key? key,
+    super.key,
     required this.semId,
     required this.dayOfWeek,
     required this.subjects,
     required this.existingSlots,
+    required this.onSave,
     this.specificDate,
-  }) : super(key: key);
+  });
 
   @override
   State<AddSlotModal> createState() => _AddSlotModalState();
@@ -38,7 +39,7 @@ class _AddSlotModalState extends State<AddSlotModal> {
   late TimeOfDay _startTime;
   late TimeOfDay _endTime;
   final _classroomCtrl = TextEditingController();
-  bool _isSaving = false;
+  final bool _isSaving = false;
 
   @override
   void initState() {
@@ -147,7 +148,7 @@ class _AddSlotModalState extends State<AddSlotModal> {
           ],
           const SizedBox(height: 16),
           DropdownButtonFormField<Subject>(
-            value: _selectedSubject,
+            initialValue: _selectedSubject,
             decoration: const InputDecoration(labelText: 'Subject'),
             items: widget.subjects
                 .map((s) => DropdownMenuItem(value: s, child: Text(s.name)))
@@ -222,6 +223,7 @@ Future<void> showAddSlotModal({
       dayOfWeek: dayOfWeek,
       subjects: subjects,
       existingSlots: existingSlots,
+      onSave: onSave,
       specificDate: specificDate,
     ),
   );

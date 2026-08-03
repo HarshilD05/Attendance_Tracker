@@ -38,8 +38,11 @@ class AnalyticsRepo {
     int unmarked = 0;
     int total = rows.length;
     for (final row in rows) {
-      if (row['student_status'] == 'P') attended++;
-      else if (row['student_status'] == 'U') unmarked++;
+      if (row['student_status'] == 'P') {
+        attended++;
+      } else if (row['student_status'] == 'U') {
+        unmarked++;
+      }
     }
 
     return AttendanceStats(

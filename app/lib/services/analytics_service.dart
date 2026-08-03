@@ -11,10 +11,20 @@ class AnalyticsService {
   static int computeMissable(int attended, int total, int remaining, double minReq) {
     if (total + remaining == 0) return 0;
     final req = minReq / 100;
+    // /* This calculation never lets % drop below threshold
     // (attended) / (total + remaining - x) >= req
     // => x <= (attended - req * (total + remaining)) / (1 - req)  [if req < 1]
     if (req >= 1.0) return 0;
     final missable = ((attended - req * (total + remaining)) / (1 - req)).floor();
+    // */
+
+    /* This calculation  sees remaining lecs and sees how many of them can be marked absent before
+    att. % drops below threshold. 
+    (absent + x) / (total_lecs_tilldate + remaining) < req
+    if (req >= 1.0) return 0;
+    final missable = (req * (total + remaining) - absent).floor();    
+    */
+
     return missable < 0 ? 0 : missable;
   }
 

@@ -6,7 +6,7 @@ class CustomCard extends StatelessWidget {
   final VoidCallback? onTap;
   final Color? borderColor;
 
-  const CustomCard({Key? key, required this.child, this.onTap, this.borderColor}) : super(key: key);
+  const CustomCard({super.key, required this.child, this.onTap, this.borderColor});
 
   @override
   Widget build(BuildContext context) {

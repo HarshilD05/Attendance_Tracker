@@ -21,9 +21,13 @@ class AppColorScheme extends ThemeExtension<AppColorScheme> {
   final Color unmarked;
 
   // Analytics zone colors — filled based on attendance % vs threshold
-  final Color attendanceSafe;     // >= minReq + 5%
-  final Color attendanceWarning;  // within ± 5% of minReq
-  final Color attendanceDanger;   // < minReq - 5%
+  final Color attendanceSafe;     // >= minReq + 7%
+  final Color attendanceWarning;  // within + 7% of minReq
+  final Color attendanceDanger;   // < minReq
+
+  // Holiday
+  final Color holiday;
+  final Color holidayText;
 
   // Text hierarchy
   final Color textPrimary;
@@ -40,6 +44,8 @@ class AppColorScheme extends ThemeExtension<AppColorScheme> {
     required this.attendanceSafe,
     required this.attendanceWarning,
     required this.attendanceDanger,
+    required this.holiday,
+    required this.holidayText,
     required this.textPrimary,
     required this.textSecondary,
     required this.textMuted,
@@ -56,6 +62,8 @@ class AppColorScheme extends ThemeExtension<AppColorScheme> {
     Color? attendanceSafe,
     Color? attendanceWarning,
     Color? attendanceDanger,
+    Color? holiday,
+    Color? holidayText,
     Color? textPrimary,
     Color? textSecondary,
     Color? textMuted,
@@ -70,6 +78,8 @@ class AppColorScheme extends ThemeExtension<AppColorScheme> {
       attendanceSafe:     attendanceSafe     ?? this.attendanceSafe,
       attendanceWarning:  attendanceWarning  ?? this.attendanceWarning,
       attendanceDanger:   attendanceDanger   ?? this.attendanceDanger,
+      holiday:            holiday            ?? this.holiday,
+      holidayText:        holidayText        ?? this.holidayText,
       textPrimary:        textPrimary        ?? this.textPrimary,
       textSecondary:      textSecondary      ?? this.textSecondary,
       textMuted:          textMuted          ?? this.textMuted,
@@ -89,6 +99,8 @@ class AppColorScheme extends ThemeExtension<AppColorScheme> {
       attendanceSafe:     Color.lerp(attendanceSafe,    other.attendanceSafe,    t)!,
       attendanceWarning:  Color.lerp(attendanceWarning, other.attendanceWarning, t)!,
       attendanceDanger:   Color.lerp(attendanceDanger,  other.attendanceDanger,  t)!,
+      holiday:            Color.lerp(holiday,           other.holiday,           t)!,
+      holidayText:        Color.lerp(holidayText,       other.holidayText,       t)!,
       textPrimary:        Color.lerp(textPrimary,       other.textPrimary,       t)!,
       textSecondary:      Color.lerp(textSecondary,     other.textSecondary,     t)!,
       textMuted:          Color.lerp(textMuted,         other.textMuted,         t)!,
@@ -117,6 +129,10 @@ class AppTheme {
       attendanceSafe:    Color(0xFF2ECC71), // Original Green
       attendanceWarning: Color(0xFFF39C12), // Original Orange/Gold
       attendanceDanger:  Color(0xFFE74C3C), // Original Red
+
+      // Holiday
+      holiday:           Colors.redAccent, // Deep red
+      holidayText:       Color(0xFFFFFFFF), // White
 
       // Text
       textPrimary:       Color(0xFFF9FAFB), // Off-white
@@ -179,6 +195,10 @@ class AppTheme {
       attendanceSafe:    Color(0xFF2ECC71), // Green
       attendanceWarning: Color(0xFFF39C12), // Orange/Gold
       attendanceDanger:  Color(0xFFE74C3C), // Red
+
+      // Holiday
+      holiday:           Colors.redAccent,   // Bright red
+      holidayText:       Color(0xFFFFFFFF), // White
 
       // Text
       textPrimary:       Color(0xFF1E1E1E), // Near black for main headings

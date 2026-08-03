@@ -12,7 +12,7 @@ import '../widgets/timetable_setup_card.dart';
 import '../widgets/error_snackbar.dart';
 
 class TimetableSetupScreen extends StatefulWidget {
-  const TimetableSetupScreen({Key? key}) : super(key: key);
+  const TimetableSetupScreen({super.key});
 
   @override
   State<TimetableSetupScreen> createState() => _TimetableSetupScreenState();
@@ -92,7 +92,8 @@ class _TimetableSetupScreenState extends State<TimetableSetupScreen>
               Navigator.pop(ctx);
               HapticFeedback.heavyImpact();
               final error = await Provider.of<TimetableController>(context, listen: false).removeSlot(slot.slotId!, slot.semId);
-              if (mounted && error != null) {
+              if (!context.mounted) return;
+              if (error != null) {
                 showErrorSnackBar(context, error);
               }
             },

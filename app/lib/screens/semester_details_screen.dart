@@ -16,7 +16,7 @@ import 'timetable_setup_screen.dart';
 import '../config/theme.dart';
 
 class SemesterDetailsScreen extends StatelessWidget {
-  const SemesterDetailsScreen({Key? key}) : super(key: key);
+  const SemesterDetailsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +50,10 @@ class SemesterDetailsScreen extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.calendar_today),
-                    label: Text(activeSem.startDate),
+                    label: Text(
+                      activeSem.startDate,
+                      style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary),
+                    ),
                     onPressed: null,
                   ),
                 ),
@@ -58,7 +61,10 @@ class SemesterDetailsScreen extends StatelessWidget {
                 Expanded(
                   child: OutlinedButton.icon(
                     icon: const Icon(Icons.calendar_today),
-                    label: Text(activeSem.endDate),
+                    label: Text(
+                      activeSem.endDate,
+                      style: TextStyle(color: Theme.of(context).extension<AppColorScheme>()!.textSecondary),
+                    ),
                     onPressed: null,
                   ),
                 ),
@@ -70,7 +76,7 @@ class SemesterDetailsScreen extends StatelessWidget {
               child: Text(
                 'MANAGE',
                 style: TextStyle(
-                  color: Theme.of(context).extension<AppColorScheme>()!.textMuted,
+                  color: Theme.of(context).extension<AppColorScheme>()!.textSecondary,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.2,
                 ),

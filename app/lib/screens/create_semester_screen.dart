@@ -10,7 +10,7 @@ import '../widgets/success_snackbar.dart';
 import 'semester_details_screen.dart';
 
 class CreateSemesterScreen extends StatefulWidget {
-  const CreateSemesterScreen({Key? key}) : super(key: key);
+  const CreateSemesterScreen({super.key});
 
   @override
   State<CreateSemesterScreen> createState() => _CreateSemesterScreenState();
@@ -40,16 +40,15 @@ class _CreateSemesterScreenState extends State<CreateSemesterScreen> {
       );
 
       final error = await Provider.of<SemesterController>(context, listen: false).createSemester(newSem);
-      if (mounted) {
-        if (error != null) {
-          showErrorSnackBar(context, error);
-        } else {
-          showSuccessSnackBar(context, 'Semester created successfully!');
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const SemesterDetailsScreen()),
-          );
-        }
+      if (!mounted) return;
+      if (error != null) {
+        showErrorSnackBar(context, error);
+      } else {
+        showSuccessSnackBar(context, 'Semester created successfully!');
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const SemesterDetailsScreen()),
+        );
       }
     } else {
       showErrorSnackBar(context, 'Please fill all fields and select dates');
@@ -65,8 +64,11 @@ class _CreateSemesterScreenState extends State<CreateSemesterScreen> {
     );
     if (date != null) {
       setState(() {
-        if (isStart) _startDate = date;
-        else _endDate = date;
+        if (isStart) {
+          _startDate = date;
+        } else {
+          _endDate = date;
+        }
       });
     }
   }
@@ -162,22 +164,21 @@ class _CreateSemesterScreenState extends State<CreateSemesterScreen> {
         final jsonStr = await file.readAsString();
         final error = await controller.importSemester(jsonStr);
 
-        if (mounted) {
-          if (error != null) {
-            showErrorSnackBar(context, error);
-          } else {
-            showSuccessSnackBar(context, 'Semester imported successfully!');
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const SemesterDetailsScreen()),
-            );
-          }
+        if (!context.mounted) return;
+        
+        if (error != null) {
+          showErrorSnackBar(context, error);
+        } else {
+          showSuccessSnackBar(context, 'Semester imported successfully!');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const SemesterDetailsScreen()),
+          );
         }
       }
     } catch (e) {
-      if (mounted) {
-        showErrorSnackBar(context, 'Failed to read file. Ensure it is a valid semester JSON.');
-      }
+      if (!context.mounted) return;
+      showErrorSnackBar(context, 'Failed to read file. Ensure it is a valid semester JSON.');
     }
   }
 }

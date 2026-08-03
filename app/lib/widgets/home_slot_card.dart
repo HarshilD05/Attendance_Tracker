@@ -16,7 +16,7 @@ class HomeSlotCard extends StatelessWidget {
   final bool isFutureDate;
 
   const HomeSlotCard({
-    Key? key,
+    super.key,
     required this.slot,
     required this.subName,
     required this.displayTime,
@@ -25,11 +25,11 @@ class HomeSlotCard extends StatelessWidget {
     required this.onMarkAttendance,
     required this.selectedDateIso,
     this.isFutureDate = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    final app_colors = Theme.of(context).extension<AppColorScheme>()!;
+    final appColors = Theme.of(context).extension<AppColorScheme>()!;
     final isPresent = existingAttendance?.studentStatus == 'P';
     final isAbsent = existingAttendance?.studentStatus == 'A';
     final isCancelled = existingAttendance?.isCancelled == 1;
@@ -91,8 +91,8 @@ class HomeSlotCard extends StatelessWidget {
                   ),
                 ),
                 if (isCancelled)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4.0),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
                     child: Text(
                       'CANCELLED',
                       style: TextStyle(
@@ -131,7 +131,7 @@ class HomeSlotCard extends StatelessWidget {
               ],
             ),
             if (displayTime.isNotEmpty)
-              Text(displayTime, style: TextStyle(color: app_colors.textSecondary)),
+              Text(displayTime, style: TextStyle(color: appColors.textSecondary)),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -139,13 +139,13 @@ class HomeSlotCard extends StatelessWidget {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isPresent
-                          ? app_colors.present
-                          : app_colors.surface,
-                      foregroundColor: isPresent ? Colors.white : app_colors.textSecondary,
+                          ? appColors.present
+                          : appColors.surface,
+                      foregroundColor: isPresent ? Colors.white : appColors.textSecondary,
                       side: BorderSide(
                           color: isPresent
-                              ? app_colors.present
-                              : app_colors.textMuted.withOpacity(0.2)),
+                              ? appColors.present
+                              : appColors.textMuted.withValues(alpha: 0.2)),
                     ),
                     onPressed: isFutureDate ? null : () => onMarkAttendance(0, isPresent ? 'U' : 'P'),
                     child: const Text('Present'),
@@ -156,13 +156,13 @@ class HomeSlotCard extends StatelessWidget {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isAbsent
-                          ? app_colors.absent
-                          : app_colors.surface,
-                      foregroundColor: isAbsent ? Colors.white : app_colors.textSecondary,
+                          ? appColors.absent
+                          : appColors.surface,
+                      foregroundColor: isAbsent ? Colors.white : appColors.textSecondary,
                       side: BorderSide(
                           color: isAbsent
-                              ? app_colors.absent
-                              : app_colors.textMuted.withOpacity(0.2)),
+                              ? appColors.absent
+                              : appColors.textMuted.withValues(alpha: 0.2)),
                     ),
                     onPressed: isFutureDate ? null : () => onMarkAttendance(0, isAbsent ? 'U' : 'A'),
                     child: const Text('Absent'),

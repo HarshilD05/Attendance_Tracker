@@ -1,4 +1,4 @@
-name: Attension
+name: attension
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -47,6 +47,7 @@ dependencies:
   timezone: ^0.11.1
   flutter_launcher_icons: ^0.14.4
   flutter_native_splash: ^2.4.8
+  another_flushbar: ^2.2.4
 
 dev_dependencies:
   flutter_test:
@@ -110,10 +111,10 @@ flutter_launcher_icons:
   min_sdk_android: 21
 
 flutter_native_splash:
-  color: "#ffffff"
-  image: "lib/assets/Attension_Splash_Screen.png"
+  color: "#121212"
+  image: "lib/assets/Attension_Logo.png"
   fullscreen: true
   android_12:
-    image: "lib/assets/Attension_Splash_Screen.png"
-    color: "#ffffff"
+    image: "lib/assets/Attension_Logo.png"
+    color: "#121212"
 
